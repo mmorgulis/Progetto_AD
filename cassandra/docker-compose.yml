@@ -17,7 +17,7 @@ services:
       test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
       interval: 15s
       timeout: 10s
-      retries: 6
+      retries: 10
 
   cassandra-node2:
     image: cassandra:4.1
@@ -39,7 +39,7 @@ services:
       test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
       interval: 15s
       timeout: 10s
-      retries: 6
+      retries: 10
 
   cassandra-node3:
     image: cassandra:4.1

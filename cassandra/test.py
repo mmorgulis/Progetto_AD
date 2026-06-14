@@ -2,6 +2,7 @@ import uuid
 from enum import Enum
 from cassandra.cluster import Cluster
 from cassandra import ConsistencyLevel
+from cassandra.driver import QueryLogger
 
 # Definizione dell'Enum per bloccare i media non validi a livello applicativo
 class MediaType(Enum):

@@ -3,11 +3,12 @@
 Il progetto è interamente scritto in Python e richiede 2 librerie esterne:
 1. cassandra-driver
 2. Faker
+
 Solitamente è consigliato creare una cartella *venv* per contenere le dipendenze esterne, in questo modo:
 ```
 python -m venv .venv
 ```
-E si attiva con:
+E si attiva con:  
 **Windows**
 ```
 .venv\Scripts\activate
@@ -16,7 +17,7 @@ E si attiva con:
 ```
 source .venv/bin/activate
 ```
-Successivamente è possibile installare tutte le librerie con:
+Successivamente è possibile installare tutte le librerie spostandosi nella cartella */cassandra* con:
 ```
 pip install -r requirements.txt
 ```
@@ -30,7 +31,7 @@ Invece per eseguire l'effettivo codice relativo a cassandra, è necessario aver 
 ```
 docker compose up -d
 ```
-Alcuni comandi utili per controllare l'esecuzione sono:
+Alcuni comandi utili per controllare l'esecuzione sono (su windows omettere "*sudo*"):
 1. Per controllare lo stato dei nodi:  
 ```
 sudo docker exec -it cassandra-node1 nodetool status
@@ -43,7 +44,12 @@ sudo docker exec -it cassandra-node1 nodetool describecluster
 ```
 sudo docker restart cassandra-<nome_nodo>
 ```
-Successivamente per caricare lo schema è necessario eseguire:
+Successivamente per caricare lo schema è necessario eseguire:  
+**Windows**
+```
+Get-Content schema.cql | docker exec -i cassandra-node1 cqlsh
+```
+**Linux/MacOS**
 ```
 sudo docker exec -i cassandra-node1 cqlsh < schema.cql
 ```  
