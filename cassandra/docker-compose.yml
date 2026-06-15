@@ -4,13 +4,14 @@ services:
     container_name: cassandra-node1
     ports:
       - "9042:9042"
+      - "7199:7199"
     environment:
       - CASSANDRA_CLUSTER_NAME=SocialCluster
-      - CASSANDRA_DC=DC1
-      - CASSANDRA_RACK=Rack1
-      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch # Attiva la topologia DC/Rack
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
       - MAX_HEAP_SIZE=512M
       - HEAP_NEWSIZE=100M
+      - LOCAL_JMX=no # Abilita JMX remoto
+      - JVM_EXTRA_OPTS=-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false
     volumes:
       - cassandra-data1:/var/lib/cassandra
     healthcheck:
@@ -24,9 +25,7 @@ services:
     container_name: cassandra-node2
     environment:
       - CASSANDRA_CLUSTER_NAME=SocialCluster
-      - CASSANDRA_DC=DC1
-      - CASSANDRA_RACK=Rack1
-      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
       - CASSANDRA_SEEDS=cassandra-node1
       - MAX_HEAP_SIZE=512M
       - HEAP_NEWSIZE=100M
@@ -46,9 +45,7 @@ services:
     container_name: cassandra-node3
     environment:
       - CASSANDRA_CLUSTER_NAME=SocialCluster
-      - CASSANDRA_DC=DC1
-      - CASSANDRA_RACK=Rack1
-      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
       - CASSANDRA_SEEDS=cassandra-node1
       - MAX_HEAP_SIZE=512M
       - HEAP_NEWSIZE=100M

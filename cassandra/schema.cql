@@ -1,41 +1,41 @@
--- Creazione del Keyspace con RF = 3 e SimpleStrategy (non considero fattori tipo datacenter/rack)
+-- Keyspace creation with RF = 3 and SimpleStrategy (ignores datacenter/rack factors)
 CREATE KEYSPACE IF NOT EXISTS network_giustino 
 WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};
 
 USE network_giustino;
 
--- Tabella Utenti (Query: Visualizzazione profilo / Login)
+-- Users table (Query: profile view / login)
 CREATE TABLE IF NOT EXISTS users (
     username text,
     email text,
     password_hash text,
-    nome text,
-    cognome text,
-    foto_profilo blob, -- dato che è piccola e compressa la inserisco direttamente
+    first_name text,
+    last_name text,
+    profile_picture blob, -- since it is small and compressed, store it directly
     PRIMARY KEY (username)
-    -- ci aspettiamo di fare ricerche con il nome dell'utente
+    -- we expect to search users by name
 );
 
--- Tabella Post (Query: "Posta un post" + "Mostra i post nel profilo dell'autore")
+-- Posts table (Query: "create a post" + "show posts in the author's profile")
 CREATE TABLE IF NOT EXISTS posts_by_user (
     username text,
     post_id timeuuid,
-    testo text, -- testo obbligatorio (tipo twitter)
-    media_url text, -- facoltativo foto/video sempre con link fittizi
+    post_text text, -- required text (Twitter-style)
+    media_url text, -- optional photo/video, always with fake links
     media_type text,
-    luogo text,
+    location text,
     PRIMARY KEY (username, post_id)
 ) WITH CLUSTERING ORDER BY (post_id DESC);
--- il media_type è verificato dall'application layer
+-- media_type is validated by the application layer
 
--- Tabella Feed di Home (Query: Mostra la bacheca dei follower pre-ordinata)
+-- Home feed table (Query: show the followers' pre-sorted feed)
 CREATE TABLE IF NOT EXISTS home_feed (
     viewer_username text,
     post_id timeuuid,
     author_username text,
-    testo text,
+    post_text text,
     media_url text,
     media_type text,
-    luogo text,
+    location text,
     PRIMARY KEY (viewer_username, post_id)
 ) WITH CLUSTERING ORDER BY (post_id DESC);
