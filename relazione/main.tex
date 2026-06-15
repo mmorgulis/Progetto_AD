@@ -1,0 +1,163 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[italian]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage[most]{tcolorbox}
+\geometry{a4paper, margin=1in}
+
+\title{Apache Cassandra: descrizione e prove sui nodi}
+\author{Progetto di Architetture Dati}
+\date{18 Giugno 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduzione e Genesi del Progetto}
+Apache Cassandra nasce nel 2007 presso Facebook per opera di \textbf{Avinash Lakshman} (già co-creatore di Amazon Dynamo) con l'obiettivo di risolvere le limitazioni strutturali del sistema di messaggistica interna. La sfida consisteva nel gestire miliardi di messaggi per milioni di utenti con una latenza minima e una disponibilità totale. 
+\newline\newline
+Cassandra rappresenta una sintesi ingegneristica tra due modelli fondamentali: il design distribuito di \textbf{Amazon Dynamo} e il modello di archiviazione dei dati di \textbf{Google BigQuery}. È progettata per essere una soluzione NoSQL altamente scalabile che elimina ogni \textit{single point of failure} attraverso un'architettura decentralizzata.
+
+\section{Cap theorem}
+Il \textbf{CAP theorem} é molto importante da capire per tener conto di aspetti fondamentali relativi a Cassandra.\newline\newline
+Innanzitutto vanno definiti i seguenti conetti:
+\begin{itemize}
+    \item \textbf{Consistency}: garantisce che tutti i nodi del sistema osservino una vista coerente dei dati. In particolare, ogni operazione di lettura restituisce l’ultimo valore scritto, indipendentemente dal nodo interrogato.
+
+    \item \textbf{Availability}: assicura che ogni richiesta inviata a un nodo non guasto riceva sempre una risposta in un tempo finito. La risposta può non riflettere necessariamente lo stato più aggiornato dei dati, ma il sistema rimane operativo e reattivo.
+
+    \item \textbf{Partition Tolerance}: indica la capacità del sistema di continuare a funzionare anche in presenza di guasti di rete che impediscono la comunicazione tra gruppi di nodi, generando partizioni isolate della rete.
+\end{itemize}
+
+\begin{tcolorbox}[
+    colback=gray!5,
+    colframe=gray!60,
+    title=\textbf{CAP Theorem},
+    fonttitle=\bfseries,
+    arc=2mm,
+    boxrule=0.5pt
+]
+Il \textbf{CAP theorem} stabilisce che un sistema distribuito non può fornire contemporaneamente strong \textbf{Consistency} (C), Availability (A) e \textbf{Partition Tolerance} (P) della rete.\newline
+\end{tcolorbox}
+
+\noindent
+Il CAP theorem può essere rappresentato mediante un \textbf{triangolo} i cui \textbf{vertici} corrispondono alle tre proprietà fondamentali Consistency (C), Availability (A) e Partition Tolerance (P), mentre i lati del triangolo rappresentano le possibili combinazioni tra due di esse.
+Il teorema stabilisce che un sistema distribuito non può posizionarsi contemporaneamente su tutti e tre i vertici del triangolo, ma deve necessariamente collocarsi su un solo lato.
+
+\hspace{1cm}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Figure/CAP_Theoreme.png}
+    \caption{Cap theorem}
+    \label{fig:placeholder}
+\end{figure}
+
+\noindent
+\textbf{Cassandra} viene generalmente classificato come un sistema \textbf{AP} (Availability + Partition Tolerance), infatti privilegia la disponibilità del servizio e la tolleranza alle partizioni, accettando la possibilità di leggere dati non perfettamente aggiornati in alcune condizioni.\newline \newline
+Tuttavia, grazie al modello di \textbf{consistenza configurabile}, è possibile modulare il grado di coerenza dei dati definendo opportunamente le politiche di lettura e scrittura. In questo modo il sistema può avvicinarsi a un comportamento di tipo \textbf{CP} (Consistency + Partition Tolerance), a scapito della disponibilità in presenza di condizioni avverse della rete.
+In particolare le politiche di lettura e scrittura possono essere:
+
+\begin{itemize}
+    \item \textbf{ONE:} Basta la conferma di una replica. Massima velocità, ma rischio di leggere dati vecchi.
+    \item \textbf{QUORUM:} Richiede la conferma della maggioranza (es. 3 su 5). È il bilanciamento ideale per la maggior parte dei sistemi.
+    \item \textbf{ALL:} Richiede la conferma di tutte le repliche. Garantisce consistenza forte, ma riduce la disponibilità (se un nodo è offline, la query fallisce).
+\end{itemize}
+
+\section{Modello dei Dati e Struttura Logica}
+A differenza dei database relazionali, Cassandra adotta un approccio \textbf{Wide Column Store}. La gerarchia dei dati è organizzata come segue (un esempio in figura \ref{f_schema}):
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Keyspace:} Il contenitore di massimo livello (equivalente a un database in SQL). Definisce le impostazioni di replica e il numero di copie dei dati da mantenere nel cluster (si parlerà più approfonditamente di questo nella sezione \ref{s_replicazione}).
+    \item \textbf{Tabella (o Column Family):} Definisce lo schema, ovvero colonne e tipi, ma è flessibile e perciò non richiede che ogni riga possieda le medesime colonne.
+    \item \textbf{Righe e Colonne:} Ogni riga è identificata da una chiave primaria. Le colonne sono composte da un nome, un tipo e un valore. La flessibilità permette a righe diverse della stessa tabella di avere set di attributi differenti (es. una riga con indirizzo e una senza) senza necessità di valori nulli.
+
+\begin{figure}[H]
+    \centering
+    \label{f_schema}
+    \includegraphics[width=1\linewidth]{Figure/Schema.png}
+    \caption{Esempio per visualizzare gli elementi}
+    \label{fig:placeholder}
+\end{figure}
+\end{itemize}
+
+\section{Meccanismi di Partizionamento e Scalabilità}
+La scalabilità orizzontale di Cassandra si basa sulla distribuzione dei dati tra i vari nodi, in modo che ognuno gestisca solo una frazione dell'intero dataset, collaborando con gli altri per aumentare la \textbf{availability}.
+
+\subsection{La Chiave Primaria}
+La chiave primaria è l'elemento cruciale e si divide in:
+\begin{enumerate}
+    \item \textbf{Partition Key (Chiave di Partizione):} Determina la posizione fisica dei dati. Tutte le righe con la stessa chiave di partizione risiedono sullo stesso nodo per ottimizzare l'accesso. Ad esempio, usando \texttt{user\_id} come chiave di partizione, tutti i messaggi di un utente specifico saranno raggruppati sullo stesso server.
+    \item \textbf{Clustering Key (Chiave di Clustering):} Determina l'ordinamento logico dei dati all'interno della partizione (es. ordinare i messaggi per timestamp).
+\end{enumerate}
+
+\subsection{Dal Modulo al Consistent Hashing}
+Inizialmente, i sistemi distribuiti usavano l'hash della chiave modulo il numero di nodi ($hash \pmod N$). Tuttavia, questo approccio causa uno shuffling massiccio di dati ogni volta che si aggiunge o rimuove un nodo. 
+Cassandra risolve il problema con il \textbf{Consistent Hashing}:
+\begin{itemize}
+    \item I valori di hash sono disposti su un \textbf{anello virtuale}.
+    \item Ogni nodo è responsabile di un intervallo di questo anello.
+    \item Quando una chiave viene inserita, il sistema calcola l'hash e procede in senso orario sull'anello fino a trovare il nodo giusto.
+\end{itemize}
+
+\noindent
+L'uso di \textbf{nodi virtuali (vnodes)} permette una distribuzione del carico ancora più uniforme.\newline
+Ogni dato è replicato nel nodo relativo all'intervallo calcolato tramite l'hashing ed a \textbf{r} nodi successivi con r \textbf{replication factor}.
+\newline \newline
+\noindent
+Di seguito una rappresentazione grafica di quanto appena detto:
+
+\begin{figure}[H]
+    \centering
+    \label{f_nodes}
+    \includegraphics[width=0.7\linewidth]{Figure/Nodes.png}
+    \caption{Struttura ad anello dei nodi Cassandra}
+    \label{fig:placeholder}
+\end{figure}
+
+\section{Disponibilità e Protocolli Peer-to-Peer}
+Cassandra è un sistema \textbf{leaderless}, ovvero senza master: ogni replica è uguale alle altre e ogni nodo può coordinare una richiesta. Per tale ragione sono importanti gli elementi esposti nelle seguenti sezioni (sezioni \ref{s_gossip} e \ref{s_replicazione}).
+
+\subsection{Protocollo Gossip} \label{s_gossip}
+Per mantenere il cluster sincronizzato senza un coordinatore centrale i nodi comunicano tramite il \textbf{Gossip Protocol}. Ogni secondo, ogni nodo scambia piccole informazioni con alcuni nodi scelti casualmente riguardo lo stato del cluster (nodi attivi/inattivi, intervalli di dati posseduti, versioni dello schema): questo permette al cluster di auto-gestirsi e di evitare colli di bottiglia o punti di guasto centralizzati.
+
+\subsection{Fattore di Replicazione} \label{s_replicazione}
+Il \textbf{Replication Factor (r)} determina quante copie esistono per ogni dato. Cassandra posiziona le repliche in modo strategico su diversi rack o data center per garantire che, anche in caso di blackout di un intero settore, i dati rimangano accessibili.
+
+\section{Architettura di Scrittura e Lettura (Write/Read Path)}
+
+\subsection{Percorso di Scrittura (Ottimizzato per il Throughput)}
+Cassandra raggiunge velocità di scrittura elevatissime perché evita IO casuali e lock. Il processo è il seguente:
+\begin{enumerate}
+    \item Il nodo coordinatore riceve la richiesta e la invia alle repliche.
+    \item La replica scrive immediatamente nel \textbf{Commit Log} su disco (per la durabilità).
+    \item Contemporaneamente, scrive nella \textbf{MemTable} in RAM (una struttura ordinata).
+    \item Una volta saturata la MemTable, i dati vengono scaricati (flush) asincronamente su disco in file immutabili chiamati \textbf{SS Tables} (Sorted String Tables).
+    \item Poiché le SS Table sono immutabili, gli aggiornamenti non sovrascrivono i dati esistenti, ma creano nuove voci. La \textbf{compattazione} (compaction) si occupa poi di unire i file e mantenere solo il dato più recente basandosi sul timestamp.
+\end{enumerate}
+
+\subsection{Percorso di Lettura (Reconciliazione)}
+La lettura è più complessa: il sistema deve consultare la MemTable e potenzialmente diverse SS Tables. Per mantenere le prestazioni:
+\begin{itemize}
+    \item Utilizza \textbf{Filtri di Bloom} (per escludere file che sicuramente non contengono il dato) e indici specifici.
+    \item Se le repliche restituiscono dati diversi, il coordinatore sceglie il valore con il timestamp più recente.
+    \item Viene avviato un \textbf{Read Repair} in background per aggiornare le repliche che avevano dati obsoleti.
+\end{itemize}
+
+\section{Modellazione dei Dati Query-Driven}
+In Cassandra, la modellazione è guidata dalle query (\textbf{Query-Driven}) e non dalle entità. 
+\begin{itemize}
+    \item \textbf{Denormalizzazione:} Poiché non esistono Join, i dati devono essere duplicati tra le tabelle per soddisfare query specifiche in un unico accesso.
+    \item \textbf{Efficienza vs Storage:} Si accetta la ridondanza dei dati perché lo storage è economico, mentre le query lente su cluster distribuiti sono proibitive.
+\end{itemize}
+
+\section{Criteri di Adozione}
+Cassandra è la scelta ideale quando si superano le \textbf{100.000 scritture al secondo}, i pattern di query sono prevedibili e limitati (es. feed, log, messaggistica) e si richiede alta disponibilità globale. 
+Va evitata in caso di necessità di analisi ad-hoc, aggregazioni complesse o transazioni ACID che attraversano più partizioni o tabelle (es. sistemi finanziari critici).
+
+\end{document}
