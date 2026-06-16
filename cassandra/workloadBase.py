@@ -7,10 +7,9 @@ def user_lifecycle(db: DBLogic, username: str, k_ms: int, start_time: float, tot
     """
     Simulates a realistic user behavioral pattern over a pre-populated database:
     - 50% chance to read their own home feed (Read Operation)
-    - 30% chance to follow another random user (Write Operation)
-    - 20% chance to write a new post. This triggers a REAL Fan-out on-write:
-      It queries Cassandra to fetch the actual followers of the user, then updates their feeds.
-    
+    - 30% chance to write a new post. This triggers a REAL Fan-out on-write:
+    - 20% chance to follow another random user (Write Operation)
+    It queries Cassandra to fetch the actual followers of the user, then updates their feeds.
     Repeats every k_ms until total_duration expires.
     """
     local_success_count = 0
@@ -75,7 +74,7 @@ def user_lifecycle(db: DBLogic, username: str, k_ms: int, start_time: float, tot
     return local_success_count, local_latencies
 
 
-def run_workload1(k_ms, total_duration, total_users=100):
+def run_workload_base(k_ms, total_duration, total_users=100):
     """
     Executes the social network interaction benchmark over an initialized environment.
     """
@@ -101,7 +100,7 @@ def run_workload1(k_ms, total_duration, total_users=100):
     # Generate the reference list of users matching the initialization pattern (user_0, user_1...)
     simulated_usernames = [f"user_{i}" for i in range(total_users)]
     
-    CONCURRENT_USER = 15  
+    CONCURRENT_USER = 50 
     
     print(f"\n[WORKLOAD 1] Starting Behavioral Simulation (Real Graph Fan-out)...")
     print(f" -> Active Thread Clients: {CONCURRENT_USER}")
@@ -135,7 +134,7 @@ def run_workload1(k_ms, total_duration, total_users=100):
     avg_latency_ms = (sum(global_latencies) / len(global_latencies)) * 1000 if global_latencies else 0
 
     print("=" * 60)
-    print("                WORKLOAD 1 BENCHMARK RESULTS                ")
+    print("                WORKLOAD BASE BENCHMARK RESULTS                ")
     print("=" * 60)
     print(f"Actual Execution Time:   {actual_duration:.2f} seconds")
     print(f"Total Completed Actions: {total_successful_ops} ops")
@@ -145,4 +144,4 @@ def run_workload1(k_ms, total_duration, total_users=100):
 
 
 if __name__ == "__main__":
-    run_workload1(k_ms=500, total_duration=60, total_users=100)
+    run_workload_base(k_ms=500, total_duration=60, total_users=1000)

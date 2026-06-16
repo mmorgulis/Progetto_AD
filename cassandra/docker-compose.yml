@@ -54,6 +54,11 @@ services:
     depends_on:
       cassandra-node2: # Il nodo 3 parte solo quando il nodo 2 ha finito (non è possibile farli partire insieme)
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
 
 volumes:
   cassandra-data1:

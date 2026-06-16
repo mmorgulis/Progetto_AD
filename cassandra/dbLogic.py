@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from faker import Faker
 from cassandra.cluster import Cluster
 from cassandra.concurrent import execute_concurrent_with_args
+from cassandra import ConsistencyLevel
 
 @dataclass
 class UserData:
@@ -29,21 +30,27 @@ class PostData:
     location: str = None
 
 class DBLogic:
-    def __init__(self):
-        self.IP_ADDRESS = '127.0.0.1'
+    def __init__(self, consistency_level=ConsistencyLevel.QUORUM):
+        # Important, use the docker network to have distrubuited system like queries
+        hosts_env = os.getenv('CASSANDRA_HOSTS')
+        if hosts_env:
+            self.CONTACT_POINTS = hosts_env.split(',')
+        else:
+            self.CONTACT_POINTS = ['127.0.0.1']
+
         self.CQL_PORT = 9042
         self.USER_NUMBER_INIT = 50
         self.PROFILE_PICTURE_SIZES = (1 * 1024, 5 * 1024, 10 * 1024)
         self.PASSWORD_LENGTH = 12
-        self.MAX_PROFILE_SIZE = self.PROFILE_PICTURE_SIZES[-1] # Last element
+        self.MAX_PROFILE_SIZE = 100 * 1024 # 100 Kb
         self.MIN_FOLLOWERS_PER_USER = 0
-        self.MAX_FOLLOWERS_PER_USER = self.USER_NUMBER_INIT // 3
+        self.MAX_FOLLOWERS_PER_USER = self.USER_NUMBER_INIT // 4
         self.query_logger_enabled = True
         self.CONCURRENCY_FACTOR = 10
 
         print("Connecting to Cassandra...")
 
-        self.cluster = Cluster([self.IP_ADDRESS], port=self.CQL_PORT)
+        self.cluster = Cluster(self.CONTACT_POINTS, port=self.CQL_PORT)
         self.session = self.cluster.connect()
         self.session.set_keyspace('network_giustino')
 
@@ -81,6 +88,13 @@ class DBLogic:
             INSERT INTO followers_by_user (username, follower_username, followed_at)
             VALUES (?, ?, ?)
         """)
+
+        # Consistency level
+        self.insert_user.consistency_level = consistency_level
+        self.insert_post.consistency_level = consistency_level
+        self.insert_feed.consistency_level = consistency_level
+        self.insert_following.consistency_level = consistency_level
+        self.insert_followers.consistency_level = consistency_level
 
     def _log_cql_queries(self, response_future):
         """
@@ -135,7 +149,7 @@ class DBLogic:
 
         random_number = random.randrange(6)
         # Simulation of profile images: 50% does not have an image and the others
-        # has a uniform distribution with images weighting 50Kb, 100Kb, 300Kb
+        # has a uniform distribution with images weighting 1Kb, 5Kb, 10Kb
         if HAS_PHOTO == True:
             if PHOTO_SIZE is not None:
                 if PHOTO_SIZE > self.MAX_PROFILE_SIZE:
@@ -234,6 +248,20 @@ class DBLogic:
         previous_logger_state = self.query_logger_enabled
         self.query_logger_enabled = False
 
+        # Previous preferences
+        orig_user_cl = self.insert_user.consistency_level
+        orig_post_cl = self.insert_post.consistency_level
+        orig_feed_cl = self.insert_feed.consistency_level
+        orig_following_cl = self.insert_following.consistency_level
+        orig_followers_cl = self.insert_followers.consistency_level
+
+        # Force ONE consistency level to avoid timeouts
+        self.insert_user.consistency_level = ConsistencyLevel.ONE
+        self.insert_post.consistency_level = ConsistencyLevel.ONE
+        self.insert_feed.consistency_level = ConsistencyLevel.ONE
+        self.insert_following.consistency_level = ConsistencyLevel.ONE
+        self.insert_followers.consistency_level = ConsistencyLevel.ONE
+
         usernames = []
         usernames_set = set() # registry to ensure absolute uniqueness in memory
 
@@ -323,6 +351,13 @@ class DBLogic:
         )
         inserted_feed_rows = len(results_feed)
 
+        # Restore previous consistency levels
+        self.insert_user.consistency_level = orig_user_cl
+        self.insert_post.consistency_level = orig_post_cl
+        self.insert_feed.consistency_level = orig_feed_cl
+        self.insert_following.consistency_level = orig_following_cl
+        self.insert_followers.consistency_level = orig_followers_cl
+
         self.query_logger_enabled = previous_logger_state
 
         return {
@@ -389,7 +424,7 @@ class DBLogic:
                 user_args_list.append((user.username, user.email, user.password_hash, user.first_name, user.last_name, user.profile_picture))
             
             # Execute concurrently with an optimized driver execution pool 
-            execute_concurrent_with_args(self.session, self.insert_user, user_args_list, concurrency=16)
+            execute_concurrent_with_args(self.session, self.insert_user, user_args_list, concurrency=self.CONCURRENCY_FACTOR)
 
     def insert_one_post(self, username, post_text=None, media_url=None, media_type=None, location=None):
         """
