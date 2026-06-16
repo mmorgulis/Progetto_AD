@@ -37,7 +37,7 @@ class DBLogic:
         self.PASSWORD_LENGTH = 12
         self.MAX_PROFILE_SIZE = self.PROFILE_PICTURE_SIZES[-1] # Last element
         self.MIN_FOLLOWERS_PER_USER = 0
-        self.MAX_FOLLOWERS_PER_USER = self.USER_NUMBER_INIT/3
+        self.MAX_FOLLOWERS_PER_USER = self.USER_NUMBER_INIT // 3
         self.query_logger_enabled = True
         self.CONCURRENCY_FACTOR = 10
 
@@ -259,7 +259,6 @@ class DBLogic:
             # async call, instead python would be waiting for the rrt of the call every .execute
             user_args_list.append((user.username, user.email, user.password_hash, user.first_name, user.last_name, 
                                    user.profile_picture))
-            usernames.append(user.username)
             
         # Concurrent esecution
         results_users = execute_concurrent_with_args(

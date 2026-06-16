@@ -55,4 +55,4 @@ CREATE TABLE followers_by_user (
     follower_username text,
     followed_at timestamp,
     PRIMARY KEY (username, follower_username)
-) WITH CLUSTERING ORDER BY (follower_username ASC)
+) WITH CLUSTERING ORDER BY (follower_username ASC);
