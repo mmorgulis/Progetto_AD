@@ -8,7 +8,17 @@
 \usepackage{geometry}
 \usepackage{enumitem}
 \usepackage[most]{tcolorbox}
+\usepackage{titlesec}
 \geometry{a4paper, margin=1in}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries}
+  {\thesection}{1em}{}
+  [\titlerule]
+
+\titleformat{\subsection}
+  {\bfseries\large}
+  {\thesubsection}{1em}{}
 
 \title{Apache Cassandra: descrizione e prove sui nodi}
 \author{Progetto di Architetture Dati}
@@ -18,12 +28,16 @@
 
 \maketitle
 
-\section{Introduzione e Genesi del Progetto}
+\vspace{2cm}
+\tableofcontents
+\newpage
+ 
+\section{Introduzione e nozioni base}
 Apache Cassandra nasce nel 2007 presso Facebook per opera di \textbf{Avinash Lakshman} (già co-creatore di Amazon Dynamo) con l'obiettivo di risolvere le limitazioni strutturali del sistema di messaggistica interna. La sfida consisteva nel gestire miliardi di messaggi per milioni di utenti con una latenza minima e una disponibilità totale. 
 \newline\newline
 Cassandra rappresenta una sintesi ingegneristica tra due modelli fondamentali: il design distribuito di \textbf{Amazon Dynamo} e il modello di archiviazione dei dati di \textbf{Google BigQuery}. È progettata per essere una soluzione NoSQL altamente scalabile che elimina ogni \textit{single point of failure} attraverso un'architettura decentralizzata.
 
-\section{Cap theorem}
+\subsection{Cap theorem}
 Il \textbf{CAP theorem} é molto importante da capire per tener conto di aspetti fondamentali relativi a Cassandra.\newline\newline
 Innanzitutto vanno definiti i seguenti conetti:
 \begin{itemize}
@@ -69,6 +83,18 @@ In particolare le politiche di lettura e scrittura possono essere:
     \item \textbf{ALL:} Richiede la conferma di tutte le repliche. Garantisce consistenza forte, ma riduce la disponibilità (se un nodo è offline, la query fallisce).
 \end{itemize}
 
+\subsection{Bloom Filter} \label{s_bloom}
+
+Un \textbf{Bloom filter} è una struttura dati probabilistica utilizzata per verificare l'appartenenza di un elemento a un insieme. È progettato per essere estremamente efficiente in termini di memoria e tempo di risposta, al costo di una possibile presenza di \textbf{falsi positivi}, mentre \textbf{non produce mai falsi negativi}.\newline
+
+\noindent
+La struttura si basa su un array di $m$ bit inizialmente impostati a $0$ e su $k$ funzioni di hash indipendenti. Ogni elemento inserito viene elaborato dalle $k$ funzioni di hash, che producono $k$ indici nell’array; i bit corrispondenti a tali posizioni vengono impostati a $1$.\newline
+
+\noindent
+La fase di \textbf{query} avviene in modo analogo: l’elemento viene hashato con le stesse $k$ funzioni e si controllano i bit nelle posizioni ottenute. Se \textbf{almeno uno} di questi bit è $0$, l’elemento è \textbf{certamente non presente}. Se invece tutti i bit risultano $1$, l’elemento viene considerato \textbf{potenzialmente presente}, con una certa probabilità di falso positivo.
+\noindent
+La probabilità di falso positivo dipende principalmente dalla dimensione dell’array $m$, dal numero di elementi inseriti $n$ e dal numero di funzioni di hash $k$: in particolare, all’aumentare di $n$, cresce la saturazione dell’array di bit, aumentando la probabilità di collisioni tra elementi diversi.
+
 \section{Modello dei Dati e Struttura Logica}
 A differenza dei database relazionali, Cassandra adotta un approccio \textbf{Wide Column Store}. La gerarchia dei dati è organizzata come segue (un esempio in figura \ref{f_schema}):
 
@@ -86,17 +112,23 @@ A differenza dei database relazionali, Cassandra adotta un approccio \textbf{Wid
 \end{figure}
 \end{itemize}
 
-\section{Meccanismi di Partizionamento e Scalabilità}
+\subsection{Modellazione dei Dati Query-Driven} \label{s_denormalization}
+In Cassandra, la modellazione dei dati segue un approccio \textbf{Query-Driven}, ovvero è progettata a partire dalle query che l'applicazione dovrà eseguire più frequentemente, anziché dalla rappresentazione delle entità e delle loro relazioni come avviene nei database relazionali.\newline
+Per questo motivo, le tabelle vengono create e organizzate in modo da consentire l'accesso diretto ai dati necessari per uno specifico caso d'uso. Ciò porta spesso a una \textbf{denormalizzazione} dei dati, ovvero alla duplicazione controllata delle informazioni in più tabelle per ottimizzare le operazioni di lettura.\newline
+Questo approccio riduce la necessità di operazioni costose come \textbf{join} e aggregazioni, che Cassandra non supporta in modo efficiente, garantendo prestazioni elevate e tempi di risposta prevedibili anche su grandi quantità di dati.\newline
+Cassandra risulta quindi particolarmente efficiente in sistemi con un \textbf{insieme limitato} e ben definito di \textbf{query}, dove i pattern di accesso ai dati sono noti a priori e i requisiti di scalabilità e disponibilità sono elevati.
+
+\subsection{Meccanismi di Partizionamento e Scalabilità}
 La scalabilità orizzontale di Cassandra si basa sulla distribuzione dei dati tra i vari nodi, in modo che ognuno gestisca solo una frazione dell'intero dataset, collaborando con gli altri per aumentare la \textbf{availability}.
 
-\subsection{La Chiave Primaria}
+\subsubsection{La Chiave Primaria} \label{s_primary_key}
 La chiave primaria è l'elemento cruciale e si divide in:
 \begin{enumerate}
     \item \textbf{Partition Key (Chiave di Partizione):} Determina la posizione fisica dei dati. Tutte le righe con la stessa chiave di partizione risiedono sullo stesso nodo per ottimizzare l'accesso. Ad esempio, usando \texttt{user\_id} come chiave di partizione, tutti i messaggi di un utente specifico saranno raggruppati sullo stesso server.
     \item \textbf{Clustering Key (Chiave di Clustering):} Determina l'ordinamento logico dei dati all'interno della partizione (es. ordinare i messaggi per timestamp).
 \end{enumerate}
 
-\subsection{Dal Modulo al Consistent Hashing}
+\subsubsection{Dal Modulo al Consistent Hashing}
 Inizialmente, i sistemi distribuiti usavano l'hash della chiave modulo il numero di nodi ($hash \pmod N$). Tuttavia, questo approccio causa uno shuffling massiccio di dati ogni volta che si aggiunge o rimuove un nodo. 
 Cassandra risolve il problema con il \textbf{Consistent Hashing}:
 \begin{itemize}
@@ -107,7 +139,7 @@ Cassandra risolve il problema con il \textbf{Consistent Hashing}:
 
 \noindent
 L'uso di \textbf{nodi virtuali (vnodes)} permette una distribuzione del carico ancora più uniforme.\newline
-Ogni dato è replicato nel nodo relativo all'intervallo calcolato tramite l'hashing ed a \textbf{r} nodi successivi con r \textbf{replication factor}.
+Ogni dato è replicato nel nodo relativo all'intervallo calcolato tramite l'hashing ed a \textbf{r} nodi successivi con r \textbf{replication factor} (si veda sezione \ref{s_replicazione}).
 \newline \newline
 \noindent
 Di seguito una rappresentazione grafica di quanto appena detto:
@@ -120,18 +152,18 @@ Di seguito una rappresentazione grafica di quanto appena detto:
     \label{fig:placeholder}
 \end{figure}
 
-\section{Disponibilità e Protocolli Peer-to-Peer}
+\subsection{Disponibilità e Protocolli Peer-to-Peer}
 Cassandra è un sistema \textbf{leaderless}, ovvero senza master: ogni replica è uguale alle altre e ogni nodo può coordinare una richiesta. Per tale ragione sono importanti gli elementi esposti nelle seguenti sezioni (sezioni \ref{s_gossip} e \ref{s_replicazione}).
 
-\subsection{Protocollo Gossip} \label{s_gossip}
+\subsubsection{Protocollo Gossip} \label{s_gossip}
 Per mantenere il cluster sincronizzato senza un coordinatore centrale i nodi comunicano tramite il \textbf{Gossip Protocol}. Ogni secondo, ogni nodo scambia piccole informazioni con alcuni nodi scelti casualmente riguardo lo stato del cluster (nodi attivi/inattivi, intervalli di dati posseduti, versioni dello schema): questo permette al cluster di auto-gestirsi e di evitare colli di bottiglia o punti di guasto centralizzati.
 
-\subsection{Fattore di Replicazione} \label{s_replicazione}
+\subsubsection{Fattore di Replicazione} \label{s_replicazione}
 Il \textbf{Replication Factor (r)} determina quante copie esistono per ogni dato. Cassandra posiziona le repliche in modo strategico su diversi rack o data center per garantire che, anche in caso di blackout di un intero settore, i dati rimangano accessibili.
 
-\section{Architettura di Scrittura e Lettura (Write/Read Path)}
+\subsection{Architettura di Scrittura e Lettura}
 
-\subsection{Percorso di Scrittura (Ottimizzato per il Throughput)}
+\subsubsection{Percorso di Scrittura (Ottimizzato per il Throughput)}
 Cassandra raggiunge velocità di scrittura elevatissime perché evita IO casuali e lock. Il processo è il seguente:
 \begin{enumerate}
     \item Il nodo coordinatore riceve la richiesta e la invia alle repliche.
@@ -141,23 +173,211 @@ Cassandra raggiunge velocità di scrittura elevatissime perché evita IO casuali
     \item Poiché le SS Table sono immutabili, gli aggiornamenti non sovrascrivono i dati esistenti, ma creano nuove voci. La \textbf{compattazione} (compaction) si occupa poi di unire i file e mantenere solo il dato più recente basandosi sul timestamp.
 \end{enumerate}
 
-\subsection{Percorso di Lettura (Reconciliazione)}
+Di seguito uno schema di quanto detto:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{Figure/Write.png}
+    \caption{Schema di scrittura nel DB}
+    \label{f_write}
+\end{figure}
+
+\subsubsection{Percorso di Lettura (Reconciliazione)}
 La lettura è più complessa: il sistema deve consultare la MemTable e potenzialmente diverse SS Tables. Per mantenere le prestazioni:
 \begin{itemize}
-    \item Utilizza \textbf{Filtri di Bloom} (per escludere file che sicuramente non contengono il dato) e indici specifici.
+    \item Utilizza \textbf{Bloom filter} per escludere file che sicuramente non contengono il dato e indici specifici.
+    \newline
+    I Bloom filter sono strutture dati \textbf{probabilistiche} che consentono di verificare rapidamente se un elemento non è presente in un insieme: possono generare falsi positivi ma non falsi negativi. Per una descrizione più dettagliata vedere la sezione \ref{s_bloom}.
     \item Se le repliche restituiscono dati diversi, il coordinatore sceglie il valore con il timestamp più recente.
     \item Viene avviato un \textbf{Read Repair} in background per aggiornare le repliche che avevano dati obsoleti.
 \end{itemize}
 
-\section{Modellazione dei Dati Query-Driven}
-In Cassandra, la modellazione è guidata dalle query (\textbf{Query-Driven}) e non dalle entità. 
+Di seguito uno schema di quanto detto:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{Figure/Read.png}
+    \caption{Schema di lettura nel DB}
+    \label{f_write}
+\end{figure}
+
+\section{Dominio dei Dati}
+Il dominio riguarda la progettazione e gestione di un \textbf{social network} distribuito, in cui gli utenti possono registrarsi, creare e condividere post anche con contenuti multimediali, seguire altri utenti e consultare un feed personalizzato dei contenuti pubblicati dalle persone che seguono.\newline\newline
+I \textbf{contenuti multimediali} non vengono realmente memorizzati nel database Cassandra, ma sono rappresentati tramite generazioni di bit casuali o link fittizi, con lo scopo di simulare la presenza di foto e video che, in un’architettura reale, sarebbero tipicamente archiviati in sistemi esterni dedicati allo storage distribuito.\newline\newline
+Un \textbf{utente} è definito da username, email, password hashata, nome, cognome e un eventuale immagine del profilo.\newline
+
+\section{Architettura Codice}
+Per effettuare le prove sui nodi Cassandra sono stati simulati $n$ nodi, ciascuno eseguito all'interno di un diverso \textbf{Docker Compose}. Le prove prevedono un incremento progressivo del numero di nodi, con l'aspettativa che le prestazioni del sistema crescano in modo approssimativamente lineare.
+\newline\newline
+Successivamente sono state eseguite anche prove di \textbf{fault tolerance}, simulando la caduta di uno o più nodi al fine di verificare la robustezza del sistema e la sua capacità di continuare a operare correttamente.
+\newline\newline
+Le componenti principali del codice sono:
 \begin{itemize}
-    \item \textbf{Denormalizzazione:} Poiché non esistono Join, i dati devono essere duplicati tra le tabelle per soddisfare query specifiche in un unico accesso.
-    \item \textbf{Efficienza vs Storage:} Si accetta la ridondanza dei dati perché lo storage è economico, mentre le query lente su cluster distribuiti sono proibitive.
+    \item \texttt{dbLogic.py}: Gestisce la logica deldel database e le operazioni correlate per il suo setup
+    \item \texttt{docker-compose.yml}: avvia un cluster Cassandra a \textit{n} nodi in Docker, configurando un cluster chiamato “SocialCluster” con replica tra nodi, persistenza dei dati su volumi separati e controlli di healthcheck e dipendenze di avvio tra i servizi
+    \item \texttt{schema.cql}: definisce il keyspace e le tabelle del database, modellando utenti, post, feed e relazioni di follower/following ottimizzati per query specifiche: profilo, timeline e rete sociale
+    \item \texttt{workload.py}: si occupa del popolamento dei dati e della simulazione di operazioni su diverse configurazioni del sistema, al fine di riprodurre scenari realistici di utilizzo.
 \end{itemize}
 
-\section{Criteri di Adozione}
-Cassandra è la scelta ideale quando si superano le \textbf{100.000 scritture al secondo}, i pattern di query sono prevedibili e limitati (es. feed, log, messaggistica) e si richiede alta disponibilità globale. 
-Va evitata in caso di necessità di analisi ad-hoc, aggregazioni complesse o transazioni ACID che attraversano più partizioni o tabelle (es. sistemi finanziari critici).
+\noindent
+Nelle sezioni seguenti saranno analizzati più approfonditamente alcuni componenti di interesse.
+
+\subsection{schema.cql}
+Definisce un keyspace Cassandra denominato \texttt{"network\_giustino"}, al suo interno si può configurare la strategia di replica ed il fattore di replica (visto nella seione \ref{s_replicazione}).\newline\newline
+All'interno del keyspace vengono definite diverse tabelle per supportare le funzionalità principali di un social network. La tabella \texttt{users} memorizza le informazioni degli utenti, identificati univocamente tramite \texttt{username}, includendo un'immagine profilo salvata come blob e informazioni anagrafiche come nome, cognome, l’indirizzo email, la password sotto forma di hash implementato con SHA256.\newline\newline
+La tabella \texttt{posts\_by\_user} modella i post degli utenti, utilizzando una chiave di partizione basata su \texttt{username} e una chiave di clustering \texttt{post\_id} di tipo \texttt{timeuuid} ordinata in modo decrescente per consentire il recupero rapido dei post più recenti (si veda il significato delle chiavi alla sezione \ref{s_primary_key}).\newline
+La tabella \texttt{home\_feed} è progettata per ottimizzare la lettura del feed personale, precomputando i contenuti visibili a ciascun utente e ordinandoli per data.\newline
+Le relazioni sociali sono gestite tramite due tabelle denormalizzate: \texttt{following\_by\_user}, che memorizza gli utenti seguiti da ciascun utente, e \texttt{followers\_by\_user}, che rappresenta invece gli utenti che seguono un determinato profilo.\newline\newline
+Questa struttura segue il paradigma di Cassandra basato sulla denormalizzazione e sulla progettazione orientata alle query (si veda sezione \ref{s_denormalization} per più dettagli).
+
+\subsection{docker-compose.yml}
+È un file di configurazione e definisce i nodi del cluster Cassandra con l’obiettivo di simulare il sistema in locale.\newline
+Tutti i nodi utilizzano l’immagine ufficiale \texttt{cassandra:4.1} e appartengono allo stesso cluster logico denominato \texttt{SocialCluster}, garantendo così la possibilità di replicare dati e testare scenari di consistenza e tolleranza ai guasti.\newline\newline
+\noindent
+Il primo nodo funge da \textit{seed node}, ovvero punto di riferimento iniziale per la formazione del cluster, mentre gli altri nodi si collegano ad esso tramite la variabile \texttt{CASSANDRA\_SEEDS}. La configurazione utilizza lo \texttt{SimpleSnitch}, adatta a deployment single-datacenter, coerente con un ambiente di sviluppo.\newline\newline
+\noindent
+Un aspetto rilevante è la gestione delle risorse JVM, dove vengono impostati esplicitamente i limiti di heap (\texttt{MAX\_HEAP\_SIZE} e \texttt{HEAP\_NEWSIZE}) per ottimizzare le prestazioni in un contesto containerizzato. Inoltre, sul primo nodo viene abilitato l’accesso JMX remoto tramite \texttt{LOCAL\_JMX=no} e parametri JVM aggiuntivi, permettendo il monitoraggio del cluster.\newline\newline
+\noindent
+Per garantire una corretta inizializzazione, i nodi sono collegati tramite \texttt{depends\_on} e \texttt{healthcheck}, che verificano la disponibilità del servizio Cassandra tramite comandi CQL prima di avviare i nodi successivi.\newline\newline
+\noindent
+Vengono inoltre esposte le porte \texttt{9042} e \texttt{7199}: la prima è utilizzata da Cassandra per le connessioni client tramite protocollo CQL, mentre la seconda è dedicata al monitoraggio del sistema attraverso JMX, consentendo l’accesso a metriche e strumenti di analisi.\newline
+\underline{Osservazione:} tramite il comando "\texttt{jconsole}" e collegandosi a "\texttt{localhost:7199}" si otterrà una visualizzazione grafica delle performance\newline\newline
+\noindent
+Infine, vengono definiti volumi persistenti separati per ciascun nodo, assicurando la durabilità dei dati anche in caso di riavvio dei container.
+
+\subsection{dbLogic.py} \label{s_dbLogic}
+Implementa la logica applicativa: la classe principale \texttt{DBLogic} gestisce la connessione al cluster, la configurazione del keyspace e la preparazione delle query CQL, ottimizzando le prestazioni tramite l’uso di \textbf{prepared statements}, ovvero query che vengono precompilate e analizzate una sola volta dal database. In fase di esecuzione, tali query ricevono esclusivamente i parametri dinamici, evitando così la ripetizione delle operazioni di parsing e pianificazione dell’esecuzione ad ogni richiesta e riducendo significativamente l’overhead computazionale.\newline\newline
+\noindent
+Una parte centrale del sistema è la generazione di dati realistici, realizzata tramite la libreria \texttt{Faker}. Vengono creati utenti, post e relazioni sociali (following/followers) con \textbf{distribuzioni probabilistiche} che simulano comportamenti realistici, come il numero variabile di post per utente e la presenza opzionale di contenuti multimediali (per esempio un post deve avere un testo mentre una risorsa audio/video non é d'obbligo averla).\newline
+La libreria \texttt{Faker} può generare potenziali duplicati, poiché attinge da un insieme limitato di dati predefiniti. Per questo motivo è stato necessario introdurre una struttura dati di tipo \texttt{set}, utilizzata per garantire l’unicità degli identificativi (in particolare degli username), evitando così inserimenti duplicati e mantenendo l’integrità delle chiavi primarie nel database.\newline\newline
+\noindent
+Per migliorare le prestazioni in fase di popolamento del database, il codice utilizza \textbf{esecuzioni concorrenti} tramite il metodo del driver Python di Cassandra \newline \texttt{execute\_concurrent\_with\_args}, riducendo significativamente il tempo necessario per inserire grandi quantità di dati: infatti, per inserimenti con più di 15 elementi (parametro opportunamente scelto), l'utilizzo del metodo consente di eseguire più operazioni in parallelo anziché in modo sequenziale, in questo modo si riduce il tempo complessivo di esecuzione e si migliora l'utilizzo delle risorse di rete e del client.\newline\newline
+\noindent
+Inoltre, viene implementata una strategia di \textbf{fan-out on write} per la home feed, precomputando le timeline degli utenti in base ai loro follower (maggiorni dettagli nella sezione \ref{s_workload}).\newline\newline
+\noindent
+La logica include anche la gestione delle relazioni sociali attraverso tabelle denormalizzate, coerenti con il modello di Cassandra, aggiornate simultaneamente per garantire coerenza tra viste complementari (following e followers).\newline\newline
+\noindent
+Infine, sono presenti funzioni di inserimento singolo e batch per utenti, post e relazioni, che permettono sia test mirati sia generazione massiva di dati per benchmarking del sistema.
+
+\subsection{workload.py} \label{s_workload}
+Implementa un \textbf{workload di benchmark} volto a simulare il comportamento realistico degli utenti di un social network e a misurare le prestazioni del cluster Cassandra in termini di throughput e latenza. Dopo aver inizializzato il database con un insieme di utenti, post e relazioni sociali generate automaticamente, il sistema avvia più thread concorrenti che rappresentano utenti attivi sulla piattaforma.\newline\newline
+\noindent
+Ogni thread esegue ciclicamente una delle principali operazioni tipiche di un social network secondo una \textbf{distribuzione probabilistica}: consultazione della propria home feed (50\% delle operazioni), creazione di una nuova relazione di follow (30\%) oppure pubblicazione di un post (20\%). In questo modo il benchmark riproduce un carico misto di letture e scritture, più vicino a uno scenario reale rispetto a test sintetici basati su una singola tipologia di query.\newline\newline
+\noindent
+Particolare attenzione è dedicata alla simulazione della strategia \textbf{fan-out on write}, come detto nella sezione \ref{s_dbLogic}. Quando un utente pubblica un nuovo contenuto, il sistema recupera dal database l'elenco reale dei suoi follower e inserisce immediatamente una copia del post nella home feed di ciascuno di essi. Questa scelta consente di valutare il costo computazionale della propagazione dei contenuti in fase di scrittura, approccio comunemente adottato nei social network per velocizzare le successive operazioni di lettura.\newline\newline
+\noindent
+Al termine dell'esecuzione vengono raccolte e analizzate le \textbf{metriche} principali del sistema, tra cui il numero totale di operazioni completate, il throughput espresso in operazioni al secondo e la latenza media delle richieste. Tali misure consentono di valutare il comportamento del cluster Cassandra sotto un carico concorrente e di confrontare l'impatto delle diverse configurazioni o strategie di modellazione dei dati.
+
+\section{Performance in Situazioni Stabili}
+
+\section{Performance con Caduta Nodi}
+
+\section{How to Run}
+L'intero progetto è sviluppato in Python e richiede l'installazione di alcune dipendenze esterne, in particolare le librerie \texttt{cassandra-driver} e \texttt{Faker}. Per una corretta gestione delle dipendenze è consigliato creare un ambiente virtuale dedicato (\texttt{venv}), in modo da isolare le librerie del progetto dal resto del sistema.\newline\newline
+\noindent
+La creazione dell'ambiente virtuale può essere effettuata tramite il comando:
+
+\texttt{python -m venv .venv}
+
+\vspace{0.5cm}
+\noindent
+Successivamente, l'ambiente può essere attivato con:
+
+\textbf{Windows:} \texttt{.venv\textbackslash Scripts\textbackslash activate}
+
+\textbf{Linux/macOS:} \texttt{source .venv/bin/activate}
+
+\vspace{0.5cm}
+\noindent
+Una volta attivato l'ambiente virtuale, è possibile installare tutte le dipendenze richieste spostandosi nella cartella del progetto ed eseguendo:
+
+\texttt{pip install -r requirements.txt}
+
+\vspace{0.5cm}
+\noindent
+In alternativa, le librerie possono essere installate singolarmente:
+
+\texttt{pip install cassandra-driver}\newline
+
+\texttt{pip install Faker}
+
+\subsection{Avvio del cluster Cassandra tramite Docker}
+
+Per eseguire il cluster Cassandra è necessario aver installato Docker e Docker Compose.\newline
+L'avvio dei container può essere effettuato tramite:
+
+\texttt{docker compose up -d}
+
+\vspace{0.5cm}
+\noindent
+Una volta avviato il cluster, alcuni comandi utili per monitorarne lo stato sono:
+
+\textbf{Verifica stato nodi}:\\
+\hspace*{1cm}\texttt{sudo docker exec -it cassandra-node1 nodetool status}
+
+\textbf{Visualizzazione topologia cluster}:\\
+\hspace*{1cm}\texttt{sudo docker exec -it cassandra-node1 nodetool describecluster}
+
+\vspace{0.5cm}
+\noindent
+Nel caso in cui un nodo non venga avviato correttamente, è possibile riavviarlo mediante:
+
+\texttt{sudo docker restart cassandra-<nome\_nodo>}
+
+\underline{Oss:} Su sistemi Windows il prefisso \texttt{sudo} può essere omesso
+
+\subsection{Caricamento dello schema}
+
+Dopo l'avvio del cluster è necessario caricare lo schema Cassandra definito nel file \texttt{schema.cql}.
+
+\textbf{Windows}:\\
+\hspace*{1cm}\texttt{Get-Content schema.cql | docker exec -i cassandra-node1 cqlsh}
+
+\textbf{Linux/macOS}:\\
+\hspace*{1cm}\texttt{sudo docker exec -i cassandra-node1 cqlsh < schema.cql}
+
+\subsection{Popolamento del database}
+
+Una volta creato lo schema, il database può essere popolato con dati sintetici eseguendo lo script Python dedicato:
+
+\texttt{python3 dbLogic.py}
+
+\subsection{Accesso alla shell CQL}
+
+Per interagire direttamente con Cassandra ed eseguire query manuali è possibile accedere alla shell CQL tramite:
+
+\texttt{sudo docker exec -it cassandra-node1 cqlsh}
+
+\vspace{0.5cm}
+\noindent
+Ad esempio, una volta aperta la shell, è possibile interrogare la tabella degli utenti mediante:
+
+\texttt{SELECT username, email, first\_name, last\_name}\newline
+
+\texttt{FROM users;}
+
+\subsection{Gestione dei container}
+
+Per arrestare temporaneamente i container mantenendo i volumi persistenti:
+
+\texttt{sudo docker compose stop}
+
+\vspace{0.5cm}
+\noindent
+Per riavviare i container precedentemente arrestati:
+
+\texttt{sudo docker compose start}
+
+\vspace{0.5cm}
+\noindent
+Per eliminare i container mantenendo i volumi:
+
+\texttt{sudo docker compose down}
+
+\vspace{0.5cm}
+\noindent
+Per eliminare sia i container sia i volumi associati:
+
+\texttt{sudo docker compose down -v}
+
+\section{Conclusioni}
 
 \end{document}
