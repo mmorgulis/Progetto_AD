@@ -78,6 +78,9 @@ Per cancellare anche i container e i volumi associati:
 ```
 sudo docker compose down -v
 ```
-
+Per automatizzare la creazione dei container e l'inserimento dello schema si può usare lo script shell scritto appositamente:
+```
+./initEnv.sh
+```
 
 
