@@ -26,12 +26,12 @@ docker run --rm \
   --network=cassandra_default \
   -v "$(pwd)":/app -w /app \
   -e CASSANDRA_HOSTS="cassandra-node1" \
-  python:3.10-slim sh -c "pip install cassandra-driver faker >/dev/null && python3 workloadWriteRead.py" > linear_1_node.txt
+  python:3.10-slim sh -c "pip install cassandra-driver faker >/dev/null && python3 workloadStressTest.py" > testScalability_1_node.txt
 
 docker compose down -v
 
 # -------------------------------------------------------------------------
-# PHASE 2: 2 ACTIVE NODES (Doubling infrastructure)
+# PHASE 2: 2 ACTIVE NODES
 # -------------------------------------------------------------------------
 echo "Starting Phase 2: 2 Active Nodes"
 docker compose up -d cassandra-node1 cassandra-node2
@@ -50,12 +50,12 @@ docker run --rm \
   --network=cassandra_default \
   -v "$(pwd)":/app -w /app \
   -e CASSANDRA_HOSTS="cassandra-node1,cassandra-node2" \
-  python:3.10-slim sh -c "pip install cassandra-driver faker >/dev/null && python3 workloadWriteRead.py" > linear_2_nodes.txt
+  python:3.10-slim sh -c "pip install cassandra-driver faker >/dev/null && python3 workloadStressTest.py" > testScalability_2_nodes.txt
 
 docker compose down -v
 
 # -------------------------------------------------------------------------
-# PHASE 3: 4 ACTIVE NODES (Doubling infrastructure again)
+# PHASE 3: 4 ACTIVE NODES
 # -------------------------------------------------------------------------
 echo "Starting Phase 3: 4 Active Nodes"
 docker compose up -d cassandra-node1 cassandra-node2 cassandra-node3 cassandra-node4
@@ -74,8 +74,12 @@ docker run --rm \
   --network=cassandra_default \
   -v "$(pwd)":/app -w /app \
   -e CASSANDRA_HOSTS="cassandra-node1,cassandra-node2,cassandra-node3,cassandra-node4" \
-  python:3.10-slim sh -c "pip install cassandra-driver faker >/dev/null && python3 workloadWriteRead.py" > linear_4_nodes.txt
+  python:3.10-slim sh -c "pip install cassandra-driver faker >/dev/null && python3 workloadStressTest.py" > testScalability_4_nodes.txt
 
 docker compose down -v
 
 echo "Scalability benchmarks (1, 2, 4 nodes) completed successfully."
+
+# Restore the full topology
+docker compose up -d 
+docker exec -i cassandra-node1 cqlsh < schema.cql 2>/dev/null

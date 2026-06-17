@@ -16,9 +16,9 @@ services:
       - cassandra-data1:/var/lib/cassandra
     healthcheck:
       test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
-      interval: 15s
+      interval: 20s
       timeout: 10s
-      retries: 10
+      retries: 15
 
   cassandra-node2:
     image: cassandra:4.1
@@ -36,9 +36,9 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
-      interval: 15s
+      interval: 20s
       timeout: 10s
-      retries: 10
+      retries: 15
 
   cassandra-node3:
     image: cassandra:4.1
@@ -52,13 +52,13 @@ services:
     volumes:
       - cassandra-data3:/var/lib/cassandra
     depends_on:
-      cassandra-node1:
+      cassandra-node2:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
-      interval: 15s
+      interval: 20s
       timeout: 10s
-      retries: 10
+      retries: 15
 
   cassandra-node4:
     image: cassandra:4.1
@@ -72,13 +72,13 @@ services:
     volumes:
       - cassandra-data4:/var/lib/cassandra
     depends_on:
-      cassandra-node1:
+      cassandra-node3:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
-      interval: 15s
+      interval: 20s
       timeout: 10s
-      retries: 10
+      retries: 15
 
   cassandra-node5:
     image: cassandra:4.1
@@ -92,13 +92,13 @@ services:
     volumes:
       - cassandra-data5:/var/lib/cassandra
     depends_on:
-      cassandra-node1:
+      cassandra-node4:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
-      interval: 15s
+      interval: 20s
       timeout: 10s
-      retries: 10
+      retries: 15
 
 volumes:
   cassandra-data1:
