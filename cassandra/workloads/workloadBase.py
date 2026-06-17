@@ -1,17 +1,22 @@
+"""
+This workload simulates a realistic user behavioral pattern over a pre-populated database:
+- 50% chance to read their own home feed (Read Operation)
+- 30% chance to write a new post. This triggers a REAL Fan-out on-write:
+- 20% chance to follow another random user (Write Operation)
+It queries Cassandra to fetch the actual followers of the user, then updates their feeds.
+Repeats every k_ms until total_duration expires.
+"""
+
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 import time
 import random
 from concurrent.futures import ThreadPoolExecutor
 from dbLogic import DBLogic, UserData, PostData
 
 def user_lifecycle(db: DBLogic, username: str, k_ms: int, start_time: float, total_duration: int, all_users: list):
-    """
-    Simulates a realistic user behavioral pattern over a pre-populated database:
-    - 50% chance to read their own home feed (Read Operation)
-    - 30% chance to write a new post. This triggers a REAL Fan-out on-write:
-    - 20% chance to follow another random user (Write Operation)
-    It queries Cassandra to fetch the actual followers of the user, then updates their feeds.
-    Repeats every k_ms until total_duration expires.
-    """
     local_success_count = 0
     local_latencies = []
     interval_seconds = k_ms / 1000.0
@@ -79,7 +84,8 @@ def run_workload_base(k_ms, total_duration, total_users=100):
     Executes the social network interaction benchmark over an initialized environment.
     """
     db = DBLogic()
-    
+    db.session.default_timeout = 120.0
+
     # Clean the database tables before running the benchmarks for a clean state
     print("Truncating tables for clean state...")
     db.session.execute("TRUNCATE users")

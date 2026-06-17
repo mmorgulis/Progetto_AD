@@ -2,6 +2,9 @@
 Benchmarks Cassandra's write performance variation sequentially under different 
 profile picture BLOB sizes using the built-in user insertion logic.
 """
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import time
 from dbLogic import DBLogic
@@ -9,6 +12,7 @@ from dbLogic import DBLogic
 def run_workload_image_payload(operations_count=200):
     db = DBLogic()
     db.query_logger_enabled = False
+    db.session.default_timeout = 120.0
 
     # Clean users table for a fresh state
     db.session.execute("TRUNCATE users")

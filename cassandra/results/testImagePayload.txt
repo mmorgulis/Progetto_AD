@@ -8,7 +8,7 @@ Connected to the keyspace network_giustino
 Performance Metric             | SMALL PAYLOAD (1 KB) | LARGE PAYLOAD (100 KB)
 --------------------------------------------------------------------------------
 Total Completed Insertions     | 1000 ops             | 1000 ops            
-Total Execution Time           | 2.36 seconds         | 19.54 seconds       
-System Throughput              | 423.97 ops/sec       | 51.19 ops/sec       
-Average Write Latency          | 2.36 ms              | 19.54 ms            
+Total Execution Time           | 2.06 seconds         | 11.05 seconds       
+System Throughput              | 486.03 ops/sec       | 90.46 ops/sec       
+Average Write Latency          | 2.06 ms              | 11.05 ms            
 ================================================================================

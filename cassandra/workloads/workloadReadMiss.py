@@ -1,9 +1,10 @@
 """
-workloadReadMiss.py
-
 Benchmarks Cassandra's Read Miss handling efficiency sequentially by comparing
 queries against existing keys (Read Hits) versus non-existent keys (Read Misses).
 """
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import time
 import random
@@ -12,7 +13,8 @@ from dbLogic import DBLogic
 def run_workload_read_miss(operations_count=500, total_users=200):
     db = DBLogic()
     db.query_logger_enabled = False
-
+    db.session.default_timeout = 120.0
+    
     # Clean tables to ensure a fresh starting point
     db.session.execute("TRUNCATE users")
     db.session.execute("TRUNCATE posts_by_user")

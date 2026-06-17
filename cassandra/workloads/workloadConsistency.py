@@ -4,6 +4,10 @@ executes an insertion of a post (in a initialized database)
 for 1000 times and it compares the results with different 
 levels of consistency (ONE, QUORUM, ALL)
 """
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 
 import time
 import random
@@ -13,23 +17,23 @@ from dbLogic import DBLogic
 
 def run_simple_consistency_benchmark(operations_count=200, total_users=100):
     print("Setting up database environment...")
-    db_setup = DBLogic()
-    db_setup.query_logger_enabled = False
+    db = DBLogic()
+    db.query_logger_enabled = False
     
-    db_setup.session.default_timeout = 120.0
+    db.session.default_timeout = 120.0
 
     # Truncating tables for a clean test state
-    db_setup.session.execute("TRUNCATE users")
-    db_setup.session.execute("TRUNCATE posts_by_user")
-    db_setup.session.execute("TRUNCATE home_feed")
+    db.session.execute("TRUNCATE users")
+    db.session.execute("TRUNCATE posts_by_user")
+    db.session.execute("TRUNCATE home_feed")
     
     print(f"Pre-populating database with {total_users} users...")
-    db_setup.initialization(user_number=total_users)
+    db.initialization(user_number=total_users)
     
     time.sleep(10)
 
     # Cache actual usernames to perform valid hits
-    rows = db_setup.session.execute(f"SELECT username FROM users LIMIT {total_users}")    
+    rows = db.session.execute(f"SELECT username FROM users LIMIT {total_users}")    
     active_usernames = [row.username for row in rows]
 
     # Warm up to avoid cooling down
@@ -39,8 +43,8 @@ def run_simple_consistency_benchmark(operations_count=200, total_users=100):
     for _ in range(100):
         dummy_user = random.choice(active_usernames)
         try:
-            db_setup.insert_one_post(username=dummy_user)
-            db_setup.session.execute(warmup_statement, (dummy_user,))
+            db.insert_one_post(username=dummy_user)
+            db.session.execute(warmup_statement, (dummy_user,))
         except Exception:
             pass
     time.sleep(1)
@@ -114,4 +118,4 @@ def run_simple_consistency_benchmark(operations_count=200, total_users=100):
 
 
 if __name__ == "__main__":
-    run_simple_consistency_benchmark(operations_count=2000, total_users=1000)
+    run_simple_consistency_benchmark(operations_count=3000, total_users=2000)

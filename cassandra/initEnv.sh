@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Starting Cassandra cluster (all 4 nodes)..."
+echo "Starting Cassandra cluster..."
 docker compose up -d
 
 echo "Waiting for cassandra-node4 to be healthy (ensuring full topology is up)..."

@@ -80,29 +80,8 @@ services:
       timeout: 10s
       retries: 15
 
-  cassandra-node5:
-    image: cassandra:4.1
-    container_name: cassandra-node5
-    environment:
-      - CASSANDRA_CLUSTER_NAME=CassandraCluster
-      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
-      - CASSANDRA_SEEDS=cassandra-node1
-      - MAX_HEAP_SIZE=512M
-      - HEAP_NEWSIZE=100M
-    volumes:
-      - cassandra-data5:/var/lib/cassandra
-    depends_on:
-      cassandra-node4:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
-      interval: 20s
-      timeout: 10s
-      retries: 15
-
 volumes:
   cassandra-data1:
   cassandra-data2:
   cassandra-data3:
   cassandra-data4:
-  cassandra-data5:

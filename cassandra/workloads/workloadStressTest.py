@@ -1,3 +1,11 @@
+"""
+This workload benchmarks how does Cassandra handles a lot of 
+concurrent threads (users) in reading and writing.
+"""
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 import time
 import random
 from concurrent.futures import ThreadPoolExecutor
@@ -43,7 +51,8 @@ def read_worker(db: DBLogic, active_usernames: list, ops_per_thread: int):
 def run_workload_stress_test(total_users=1000, concurrent_threads=50, ops_per_thread=100):
     db = DBLogic()
     db.query_logger_enabled = False
-
+    db.session.default_timeout = 120.0
+    
     # Clean tables to ensure a fresh starting point
     db.session.execute("TRUNCATE users")
     db.session.execute("TRUNCATE posts_by_user")
