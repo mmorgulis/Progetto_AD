@@ -84,5 +84,6 @@ def run_workload_read_miss(operations_count=500, total_users=200):
     print(f"{'System Throughput':<30} | {f'{hit_throughput:.2f} ops/sec':<20} | {f'{miss_throughput:.2f} ops/sec':<20}")
     print(f"{'Average Request Latency':<30} | {f'{avg_hit_ms:.2f} ms':<20} | {f'{avg_miss_ms:.2f} ms':<20}")
     print("=" * 80)
+    
 if __name__ == "__main__":
     run_workload_read_miss(operations_count=1000, total_users=100)

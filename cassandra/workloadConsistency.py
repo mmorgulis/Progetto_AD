@@ -109,4 +109,4 @@ def run_simple_consistency_benchmark(operations_count=200, total_users=100):
 
 if __name__ == "__main__":
     # It must have a lot of user to test correctly
-    run_simple_consistency_benchmark(operations_count=1000, total_users=5000)
+    run_simple_consistency_benchmark(operations_count=1000, total_users=3000)

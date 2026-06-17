@@ -1,10 +1,10 @@
 #!/bin/bash
 
-echo "Starting Cassandra cluster (all nodes)..."
+echo "Starting Cassandra cluster (all 5 nodes)..."
 docker compose up -d
 
-echo "Waiting for cassandra-node3 to be healthy (ensuring full topology is up)..."
-until [ "$(docker inspect --format='{{.State.Health.Status}}' cassandra-node3)" == "healthy" ]; do
+echo "Waiting for cassandra-node5 to be healthy (ensuring full topology is up)..."
+until [ "$(docker inspect --format='{{.State.Health.Status}}' cassandra-node5)" == "healthy" ]; do
     sleep 2
 done
 

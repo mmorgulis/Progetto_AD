@@ -6,11 +6,11 @@ services:
       - "9042:9042"
       - "7199:7199"
     environment:
-      - CASSANDRA_CLUSTER_NAME=SocialCluster
+      - CASSANDRA_CLUSTER_NAME=CassandraCluster
       - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
       - MAX_HEAP_SIZE=512M
       - HEAP_NEWSIZE=100M
-      - LOCAL_JMX=no # Abilita JMX remoto
+      - LOCAL_JMX=no # JMX
       - JVM_EXTRA_OPTS=-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false
     volumes:
       - cassandra-data1:/var/lib/cassandra
@@ -24,7 +24,7 @@ services:
     image: cassandra:4.1
     container_name: cassandra-node2
     environment:
-      - CASSANDRA_CLUSTER_NAME=SocialCluster
+      - CASSANDRA_CLUSTER_NAME=CassandraCluster
       - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
       - CASSANDRA_SEEDS=cassandra-node1
       - MAX_HEAP_SIZE=512M
@@ -44,7 +44,7 @@ services:
     image: cassandra:4.1
     container_name: cassandra-node3
     environment:
-      - CASSANDRA_CLUSTER_NAME=SocialCluster
+      - CASSANDRA_CLUSTER_NAME=CassandraCluster
       - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
       - CASSANDRA_SEEDS=cassandra-node1
       - MAX_HEAP_SIZE=512M
@@ -52,7 +52,47 @@ services:
     volumes:
       - cassandra-data3:/var/lib/cassandra
     depends_on:
-      cassandra-node2: # Il nodo 3 parte solo quando il nodo 2 ha finito (non è possibile farli partire insieme)
+      cassandra-node1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  cassandra-node4:
+    image: cassandra:4.1
+    container_name: cassandra-node4
+    environment:
+      - CASSANDRA_CLUSTER_NAME=CassandraCluster
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
+      - CASSANDRA_SEEDS=cassandra-node1
+      - MAX_HEAP_SIZE=512M
+      - HEAP_NEWSIZE=100M
+    volumes:
+      - cassandra-data4:/var/lib/cassandra
+    depends_on:
+      cassandra-node1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  cassandra-node5:
+    image: cassandra:4.1
+    container_name: cassandra-node5
+    environment:
+      - CASSANDRA_CLUSTER_NAME=CassandraCluster
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
+      - CASSANDRA_SEEDS=cassandra-node1
+      - MAX_HEAP_SIZE=512M
+      - HEAP_NEWSIZE=100M
+    volumes:
+      - cassandra-data5:/var/lib/cassandra
+    depends_on:
+      cassandra-node1:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES'"]
@@ -64,3 +104,5 @@ volumes:
   cassandra-data1:
   cassandra-data2:
   cassandra-data3:
+  cassandra-data4:
+  cassandra-data5:

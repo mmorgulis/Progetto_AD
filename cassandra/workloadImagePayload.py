@@ -1,6 +1,4 @@
 """
-workloadImagePayload.py
-
 Benchmarks Cassandra's write performance variation sequentially under different 
 profile picture BLOB sizes using the built-in user insertion logic.
 """
@@ -59,7 +57,6 @@ def run_workload_image_payload(operations_count=200):
     large_throughput = total_large_writes / large_duration if large_duration > 0 else 0
     avg_large_ms = (sum(large_latencies) / len(large_latencies)) * 1000 if large_latencies else 0
 
-    # Print final comparison metrics display
     # Print final comparison metrics display
     print("\n" + "=" * 80)
     print("                    IMAGE PAYLOAD BLOB SIZE STRESS TEST REPORT                  ")
