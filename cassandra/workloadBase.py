@@ -102,7 +102,6 @@ def run_workload_base(k_ms, total_duration, total_users=100):
     
     CONCURRENT_USER = 50 
     
-    print(f"\n[WORKLOAD 1] Starting Behavioral Simulation (Real Graph Fan-out)...")
     print(f" -> Active Thread Clients: {CONCURRENT_USER}")
     print(f" -> User Request Pacing (k_ms): {k_ms}ms")
     print(f" -> Total Duration: {total_duration} seconds\n")

@@ -1,0 +1,14 @@
+Connecting to Cassandra...
+Connected to the keyspace network_giustino
+
+
+================================================================================
+                    IMAGE PAYLOAD BLOB SIZE STRESS TEST REPORT                  
+================================================================================
+Performance Metric             | SMALL PAYLOAD (1 KB) | LARGE PAYLOAD (100 KB)
+--------------------------------------------------------------------------------
+Total Completed Insertions     | 1000 ops             | 1000 ops            
+Total Execution Time           | 2.36 seconds         | 19.54 seconds       
+System Throughput              | 423.97 ops/sec       | 51.19 ops/sec       
+Average Write Latency          | 2.36 ms              | 19.54 ms            
+================================================================================

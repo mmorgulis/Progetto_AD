@@ -12,6 +12,10 @@ def run_workload_image_payload(operations_count=200):
 
     # Clean users table for a fresh state
     db.session.execute("TRUNCATE users")
+    db.session.execute("TRUNCATE posts_by_user")
+    db.session.execute("TRUNCATE home_feed")
+    db.session.execute("TRUNCATE following_by_user")
+    db.session.execute("TRUNCATE followers_by_user")
 
     small_payload = 1 * 1024    # 1 KB
     large_payload = 100 * 1024  # 100 KB

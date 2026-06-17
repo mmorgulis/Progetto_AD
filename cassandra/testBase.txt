@@ -1,0 +1,38 @@
+Connecting to Cassandra...
+Connected to the keyspace network_giustino
+
+Truncating tables for clean state...
+[CQL EXEC] <SimpleStatement query="TRUNCATE users", consistency=Not Set>
+
+[CQL EXEC] <SimpleStatement query="TRUNCATE posts_by_user", consistency=Not Set>
+
+[CQL EXEC] <SimpleStatement query="TRUNCATE home_feed", consistency=Not Set>
+
+[CQL EXEC] <SimpleStatement query="TRUNCATE following_by_user", consistency=Not Set>
+
+[CQL EXEC] <SimpleStatement query="TRUNCATE followers_by_user", consistency=Not Set>
+
+Tables truncated successfully.
+Pre-populating database with 1000 users for the baseline environment...
+Data generation for 1000 users...
+User insertion in progress ...
+Generating follow relationships...
+Inserting 6068 following relationships...
+Inserting 6068 followers relationships...
+Generating posts and feed ...
+Inserting 5950 post...
+Inserting 38417 rows of home feed...
+Baseline ready: 1000 users, 5950 posts, and 6068 follow edges.
+
+ -> Active Thread Clients: 50
+ -> User Request Pacing (k_ms): 500ms
+ -> Total Duration: 60 seconds
+
+============================================================
+                WORKLOAD BASE BENCHMARK RESULTS                
+============================================================
+Actual Execution Time:   62.23 seconds
+Total Completed Actions: 5662 ops
+System Throughput:       90.99 operations/sec
+Average Action Latency:  18.70 ms
+============================================================

@@ -42,7 +42,7 @@ class DBLogic:
         self.USER_NUMBER_INIT = 50
         self.PROFILE_PICTURE_SIZES = (1 * 1024, 5 * 1024, 10 * 1024)
         self.PASSWORD_LENGTH = 12
-        self.MAX_PROFILE_SIZE = 100 * 1024 # 100 Kb
+        self.MAX_PROFILE_SIZE = 100 * 1024 # 100 KB
         self.MIN_FOLLOWERS_PER_USER = 0
         self.MAX_FOLLOWERS_PER_USER = self.USER_NUMBER_INIT // 4
         self.query_logger_enabled = True
@@ -149,7 +149,7 @@ class DBLogic:
 
         random_number = random.randrange(6)
         # Simulation of profile images: 50% does not have an image and the others
-        # has a uniform distribution with images weighting 1Kb, 5Kb, 10Kb
+        # has a uniform distribution with images weighting 1KB, 5KB, 10KB
         if HAS_PHOTO == True:
             if PHOTO_SIZE is not None:
                 if PHOTO_SIZE > self.MAX_PROFILE_SIZE:

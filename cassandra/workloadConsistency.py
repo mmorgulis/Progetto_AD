@@ -1,3 +1,10 @@
+"""
+The consistency workload is a simple benchmark, it 
+executes an insertion of a post (in a initialized database)
+for 1000 times and it compares the results with different 
+levels of consistency (ONE, QUORUM, ALL)
+"""
+
 import time
 import random
 from cassandra import ConsistencyLevel
@@ -5,15 +12,13 @@ from cassandra.query import SimpleStatement
 from dbLogic import DBLogic
 
 def run_simple_consistency_benchmark(operations_count=200, total_users=100):
-    """
-    A straightforward, sequential consistency benchmark.
-    Measures write and read latencies across ONE, QUORUM, and ALL.
-    """
     print("Setting up database environment...")
     db_setup = DBLogic()
     db_setup.query_logger_enabled = False
     
-    print("Truncating tables for a clean test state...")
+    db_setup.session.default_timeout = 120.0
+
+    # Truncating tables for a clean test state
     db_setup.session.execute("TRUNCATE users")
     db_setup.session.execute("TRUNCATE posts_by_user")
     db_setup.session.execute("TRUNCATE home_feed")
@@ -21,10 +26,11 @@ def run_simple_consistency_benchmark(operations_count=200, total_users=100):
     print(f"Pre-populating database with {total_users} users...")
     db_setup.initialization(user_number=total_users)
     
+    time.sleep(10)
+
     # Cache actual usernames to perform valid hits
-    rows = db_setup.session.execute("SELECT username FROM users LIMIT %s", (total_users,))
+    rows = db_setup.session.execute(f"SELECT username FROM users LIMIT {total_users}")    
     active_usernames = [row.username for row in rows]
-    print(f"Setup complete. {len(active_usernames)} active users loaded.\n")
 
     # Warm up to avoid cooling down
     print("Warming up Cassandra and the JVM cache...")
@@ -50,11 +56,11 @@ def run_simple_consistency_benchmark(operations_count=200, total_users=100):
     for name, level in levels_to_test:
         print(f"Evaluating Consistency Level: {name}")
         
-        db = DBLogic()
+        db = DBLogic(consistency_level=level)
         db.query_logger_enabled = False
         
-        db.insert_post.consistency_level = level
-        
+        db.session.default_timeout = 60.0
+                
         # Write benchmark
         write_latencies = []
         for _ in range(operations_count):
@@ -108,5 +114,4 @@ def run_simple_consistency_benchmark(operations_count=200, total_users=100):
 
 
 if __name__ == "__main__":
-    # It must have a lot of user to test correctly
-    run_simple_consistency_benchmark(operations_count=1000, total_users=3000)
+    run_simple_consistency_benchmark(operations_count=2000, total_users=1000)
