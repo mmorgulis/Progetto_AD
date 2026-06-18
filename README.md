@@ -55,9 +55,15 @@ sudo docker exec -i cassandra-node1 cqlsh < schema.cql
 ```  
 Per caricare i dati dello script python:
 ```
-python3 test.py
+cd workload
+```
+```
+python3 NOME_WORKLOAD.py
 ```  
 Infine per testare direttamente della shell cql l'inserimento dei dati:
+```
+cd..
+```
 ```
 sudo docker exec -it cassandra-node1 cqlsh
 ```
