@@ -31,39 +31,32 @@ def user_lifecycle(db: DBLogic, username: str, k_ms: int, start_time: float, tot
             )[0]
             
             if action_roll == 'read_feed':
-                # SCENARIO 1: Read own home feed
+                # USE CASE 1: Read own home feed
                 query = "SELECT * FROM home_feed WHERE viewer_username = %s LIMIT 10"
                 db.session.execute(query, (username,))
                 
             elif action_roll == 'follow':
-                # SCENARIO 2: Follow another user
+                # USE CASE 2: Follow another user
                 potential_targets = [u for u in all_users if u != username]
                 if potential_targets:
                     target_to_follow = random.choice(potential_targets)
                     db.follow_user(follower_username=username, followed_username=target_to_follow)
 
             elif action_roll == 'post':
-                # SCENARIO 3: Publish a new post (WRITE)
+                # USE CASE 3: Publish a new post (WRITE)
                 post = db.insert_one_post(username=username)
                 
                 # FAN-OUT ON-WRITE ( = the post is immediately copied to all relevant destinations):
                 # Query Cassandra to get the real followers of this specific author
                 followers_query = "SELECT follower_username FROM followers_by_user WHERE username = %s"
                 followers_rows = db.session.execute(followers_query, (username,))
+                followers_list = [row.follower_username for row in followers_rows if row.follower_username != username]
                 
                 # Distribute the post strictly to the real followers found in the DB
-                for row in followers_rows:
-                    follower_username = row.follower_username
-                    if follower_username != username:  # Prevent self-feeding
-                        db.insert_row_in_the_feed(
-                            viewer_username=follower_username,
-                            post_id=post.post_id,
-                            author_username=post.username,
-                            post_text=post.post_text,
-                            media_url=post.media_url,
-                            media_type=post.media_type,
-                            location=post.location
-                        )
+                if followers_list:
+                    db.insert_feed_to_followers_concurrent(
+                        followers_list, post.post_id, username, post.post_text, post.media_url, post.media_type, post.location
+                    )
 
             op_latency = time.time() - op_start
             local_latencies.append(op_latency)

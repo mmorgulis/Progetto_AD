@@ -333,7 +333,7 @@ class DBLogic:
                 post = self.create_random_post(username)
                 post_args_list.append((post.username, post.post_id, post.post_text, post.media_url, post.media_type, post.location))
 
-                # Real Fan-out on-write implementation: populate feed for actual followers of the author
+                # Fan-out on-write implementation: populate feed for actual followers of the author
                 for follower_username in author_to_followers[username]:
                     feed_args_list.append((follower_username, post.post_id, username, post.post_text, post.media_url, post.media_type, post.location))
 
@@ -478,10 +478,29 @@ class DBLogic:
     def insert_row_in_the_feed(self, viewer_username, post_id, post_text, author_username, 
                                media_url=None, media_type=None, location=None):
         """
-        The function put a new row (a post) in the home_feed table, the text is mandatory, the remaining 
+        The function puts a new row (a post) in the home_feed table, the text is mandatory, the remaining 
         parts of the post are optional. As the insertion of the post, I can suppose that the upper 
         layer gave me an existing user and post.
         """
         self.session.execute(self.insert_feed, 
                              (viewer_username, post_id, author_username, post_text, media_url, media_type, location)
         )
+
+    def insert_feed_to_followers_concurrent(self, followers_list, post_id, author_username, post_text, 
+                                        media_url=None, media_type=None, location=None):
+        """
+        The function inserts concurrently the posts in the feed of all followers, with the 
+        async call.
+        """
+        # Prepare the args for all followers
+        statements_args = [
+            (follower, post_id, author_username, post_text, media_url, media_type, location)
+            for follower in followers_list
+        ]
+        
+        if not statements_args:
+            return
+            
+        # Launch the execute directly on the list created before
+        results = execute_concurrent_with_args(self.session, self.insert_feed, statements_args)
+        return results
