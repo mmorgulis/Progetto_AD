@@ -511,8 +511,6 @@ In questo caso non ci saranno delle vere e proprie metriche di performance, quan
 Poiché l'esecuzione soprattutto di \texttt{workloadScalability} é molto influenzata dal fatto che i nodi si trovino sulla stessa macchina, seppur in container diversi, per questo workload sono stati eseguiti 3 nodi ognuno su un \textbf{PC diverso} (tutto ciò é stato fatto sul branch \texttt{lan} per differenziarsi dalla configurazione in locale).\newline
 I risultati di ciò sono i seguenti:
 
-\todo[inline]{Riempire con i dati}
-
 %%% TABELLA 6
 \begin{table}[H]
 \centering
@@ -520,13 +518,13 @@ I risultati di ciò sono i seguenti:
 \hline
 \textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
 \hline
-\textbf{Total Completed Operations} & X ops & X ops \\
+\textbf{Total Completed Operations} & 2500 ops & 2500 ops \\
 \hline
-\textbf{Total Execution Time} & X seconds & X seconds \\
+\textbf{Total Execution Time} & 1.02 seconds & 2.01 seconds \\
 \hline
-\textbf{System Throughput} & X ops/sec & X ops/sec \\
+\textbf{System Throughput} & 2442.88 ops/sec & 1242.17 ops/sec \\
 \hline
-\textbf{Average Request Latency} & X ms & X ms \\
+\textbf{Average Request Latency} & 9.95 ms & 19.74 ms \\
 \hline
 \end{tabular}
 \caption{workloadScalability con 1 nodo su 3 macchine distinte}
@@ -540,13 +538,13 @@ I risultati di ciò sono i seguenti:
 \hline
 \textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
 \hline
-\textbf{Total Completed Operations} & X ops & X ops \\
+\textbf{Total Completed Operations} & 200000 ops & 200000 ops \\
 \hline
-\textbf{Total Execution Time} & X seconds & X seconds \\
+\textbf{Total Execution Time} & 81.93 seconds & 103.02 seconds \\
 \hline
-\textbf{System Throughput} & X ops/sec & X ops/sec \\
+\textbf{System Throughput} & 2441.00 ops/sec & 1941.43 ops/sec \\
 \hline
-\textbf{Average Request Latency} & X ms & X ms \\
+\textbf{Average Request Latency} & 81.14 ms & 102.05 ms \\
 \hline
 \end{tabular}
 \caption{workloadScalability con 2 nodi su 3 macchine distinte}
