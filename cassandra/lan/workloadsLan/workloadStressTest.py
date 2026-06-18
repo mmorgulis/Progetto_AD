@@ -8,6 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import time
 import random
+from cassandra import ConsistencyLevel
 from concurrent.futures import ThreadPoolExecutor
 from dbLogicLan import DBLogic
 
@@ -54,11 +55,12 @@ def run_workload_stress_test(total_users=1000, concurrent_threads=50, ops_per_th
     db.session.default_timeout = 120.0
     
     # Clean tables to ensure a fresh starting point
-    db.session.execute("TRUNCATE users")
-    db.session.execute("TRUNCATE posts_by_user")
-    db.session.execute("TRUNCATE home_feed")
-    db.session.execute("TRUNCATE following_by_user")
-    db.session.execute("TRUNCATE followers_by_user")
+    # Note: Cannot trucate without all nodes
+    # db.session.execute("TRUNCATE users")
+    # db.session.execute("TRUNCATE posts_by_user")
+    # db.session.execute("TRUNCATE home_feed")
+    # db.session.execute("TRUNCATE following_by_user")
+    # db.session.execute("TRUNCATE followers_by_user")
 
     # Populate the database with initial users and relations
     db.initialization(user_number=total_users)
