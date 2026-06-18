@@ -9,6 +9,8 @@
 \usepackage{enumitem}
 \usepackage[most]{tcolorbox}
 \usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{pifont}
 \geometry{a4paper, margin=1in}
 
 \titleformat{\section}
@@ -129,7 +131,7 @@ La chiave primaria è l'elemento cruciale e si divide in:
     \item \textbf{Clustering Key (Chiave di Clustering):} Determina l'ordinamento logico dei dati all'interno della partizione (es. ordinare i messaggi per timestamp).
 \end{enumerate}
 
-\subsubsection{Dal Modulo al Consistent Hashing}
+\subsubsection{Dal Modulo al Consistent Hashing} \label{s_replicationFactor}
 Inizialmente, i sistemi distribuiti usavano l'hash della chiave modulo il numero di nodi ($hash \pmod N$). Tuttavia, questo approccio causa uno shuffling massiccio di dati ogni volta che si aggiunge o rimuove un nodo. 
 Cassandra risolve il problema con il \textbf{Consistent Hashing}:
 \begin{itemize}
@@ -224,7 +226,7 @@ I \textbf{contenuti multimediali} non vengono realmente memorizzati nel database
 Un \textbf{utente} è definito da \textit{username}, \textit{email}, \textit{password} hashata, \textit{nome}, \textit{cognome} e un'eventuale \textit{immagine profilo}.
 Un \textbf{post} è definito dallo \textit{username} (ovvero l'utente che lo ha pubblicato), da un \textit{id} (generato a partire dall'username e dal timestamp), dal \textit{testo} e possibilmente una \textit{risorsa multimediale} e una \textit{location}. Inoltre sono definite le tabelle \textbf{followers\_by\_user} e \textbf{following\_by\_user} per tracciare le relazioni tra utenti.
 
-\subsection{Architettura codice}
+\subsection{Architettura codice} \label{s_architettura}
 Per analizzare il comportamento di Cassandra sono stati simulati $n$ nodi, ciascuno eseguito all'interno di un diverso \textbf{Container Docker}. Questo ci consente un possibile incremento progressivo del numero di nodi, con l'aspettativa che le prestazioni del sistema crescano in modo approssimativamente lineare.
 \newline\newline
 Successivamente sono state eseguite anche prove di \textbf{fault tolerance}, simulando la caduta di uno o più nodi al fine di verificare la robustezza del sistema e la sua capacità di continuare a operare correttamente.
@@ -291,16 +293,218 @@ Questo componente gestisce le interazioni effettive con il database e le operazi
 
 \begin{itemize}
     \item \texttt{workloadBase}: carica 1000 utenti, 50 dei quali effettuano ogni 0.5 secondi delle operazioni casuali. Questo componente utilizza 50 \textbf{thread} per simulare la concorrenza nelle operazioni
-    \item \texttt{workloadConsistency}: carica 5000 utenti e fa 1000 operazioni casuali senza concorrenza
+    \item \texttt{workloadConsistency}: carica 5000 utenti e fa 1000 operazioni casuali senza concorrenza testando le performance sui 3 diversi \textbf{consistency level}
     \item \texttt{workloadPayload}: carica 1000 utenti di cui 500 caricano un post con dei file multimediali di 1 \textit{kByte} e 500 caricano dei file multimediali di 100 \textit{kByte}. Questo scenario serve appositamente per testare le performance a differenza di payload dei post
     \item \texttt{workloadReadMiss}: carica 100 utenti e fa query base su utenti esistenti e non esistenti per testare le performance relative a \textbf{hit} e \textbf{miss} nel database
     \item \texttt{workloadStressTest}: carica 25 utenti in concorrenza; lancia quindi 25 thread che effettuano 100 caricamenti ognuno di post in parallelo per testare una situazione di stress
-    \item \texttt{workloadFaultTolerance}: Si simula il carico di un utente che esegue un’operazione al secondo, testando il sistema in diverse configurazioni del \textbf{consistency level} (si veda Sezione \ref{s_cap}). Inoltre, nel presente workload è stata valutata la \textbf{caduta dei nodi}: per un cluster di \( n \) nodi, sono state eseguite 10 richieste, dopodiché è stato fatto fallire un nodo; successivamente sono state inviate altre 10 richieste e si è proceduto alla caduta di un ulteriore nodo. Tale processo è stato ripetuto per \( n-1 \) iterazioni, fino al guasto progressivo di tutti i nodi tranne uno. Questa procedura è stata eseguita per ciascun consistency level considerato.
+    \item \texttt{workloadScalability}: é uno script shell che utilizza Docker per automatizzare la configurazione ed esecuzione di nodi distinti per poter testare il comportamento all'\textbf{aumentare dei nodi}. In particolare, avvia il nodo 1 ed esegue il \textit{workloadStressTest}; successivamente avvia il nodo 2 e ripete lo stesso test. Infine, procede con l’avvio dei nodi 3 e 4, eseguendo nuovamente il \textit{workloadStressTest}
+    \item \texttt{workloadFaultTolerance*}: Si simula il carico di un utente che esegue un’operazione al secondo, testando il sistema in diverse configurazioni del \textbf{consistency level} (si veda Sezione \ref{s_cap}): pertanto questo workload é suddiviso in 3 file (\textit{workloadFaultToleranceONE.py}, \textit{workloadFaultToleranceQUORUM.py}, \textit{workloadFaultToleranceALL.py}). Inoltre, per ognuno dei 3 consistency level è stata valutata la \textbf{caduta dei nodi}: per un cluster di \( n \) nodi, sono state eseguite 5 richieste, dopodiché è stato fatto fallire un nodo; successivamente sono state inviate altre 5 richieste e si è proceduto alla caduta di un ulteriore nodo. Tale processo è stato ripetuto per \( n-1 \) iterazioni, fino al guasto progressivo di tutti i nodi tranne uno. Questa procedura è stata eseguita per ciascun consistency level considerato.
 \end{itemize}
 
-\section{Performance in Situazioni Stabili}
+\noindent
+I risultati e le performance per ogni scenario implementato dai workload sono esposti nella sezione \ref{s_risultati}.
 
-\section{Performance con Caduta Nodi}
+\section{Performance e Risultati} \label{s_risultati}
+I risultati sono relativi ai diversi \textbf{workload}, che rappresentano differenti scenari operativi potenzialmente riscontrabili in un social network e che sono stati riprodotti attraverso tali workload (si veda la sezione \ref{s_workload} per maggiori dettagli sul loro funzionamento individuale).
+
+\subsection{Test Senza Variazione del Numero di Nodi} \label{s_risultati2}
+Tutti i test non volti a valutare la variabilità del numero di nodi sono stati eseguiti con un numero di nodi \textit{n = 4} e \textit{Replication Factor} = 3 come da configurazione standard (si veda sezione \ref{s_replicationFactor} per maggiori dettagli in merito), poiché rappresenta il massimo consentito dall’hardware a disposizione (in particolare, un PC con 16 GB di RAM, processore i5 e GPU GTX 1050 Ti).
+\newline\newline
+\noindent
+Di seguito le \textbf{performance} per ogni singolo scenario:
+
+%%% TABELLA 1
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Metric} & \textbf{Value} \\
+\hline
+\textbf{Actual Execution Time} & 60.52 s \\
+\hline
+\textbf{Total Completed Actions} & 4343 ops \\
+\hline
+\textbf{System Throughput} & 71.76 ops/s \\
+\hline
+\textbf{Average Action Latency} & 6.84 ms \\
+\hline
+\end{tabular}
+\caption{workloadBase}
+\label{t_base}
+\end{table}
+
+%%% TABELLA 2
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Level} & \textbf{Avg Write Latency} & \textbf{Avg Read Latency} & \textbf{Ops (W/R)} \\
+\hline
+\textbf{ONE}    & 1.71 ms & 2.58 ms & 3000/3000 \\
+\hline
+\textbf{QUORUM} & 1.83 ms & 2.94 ms & 2987/3000 \\
+\hline
+\textbf{ALL}    & 1.92 ms & 2.97 ms & 2993/3000 \\
+\hline
+\end{tabular}
+\caption{workloadConsistency}
+\label{t_consistency}
+\end{table}
+
+%%% TABELLA 3
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Performance Metric} & \textbf{1 KB PAYLOAD} & \textbf{100 KB PAYLOAD} \\
+\hline
+\textbf{Total Completed Insertions} & 1000 ops & 1000 ops \\
+\hline
+\textbf{Total Execution Time} & 2.06 s & 11.05 s \\
+\hline
+\textbf{System Throughput} & 486.03 ops/s & 90.46 ops/s \\
+\hline
+\textbf{Average Write Latency} & 2.06 ms & 11.05 ms \\
+\hline
+\end{tabular}
+\caption{workloadImagePayload}
+\label{t_imagePayload}
+\end{table}
+
+%%% TABELLA 5
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Performance Metric} & \textbf{READ HIT} & \textbf{READ MISS} \\
+\hline
+\textbf{Total Completed Operations} & 1000 ops & 1000 ops \\
+\hline
+\textbf{Total Execution Time} & 2.20 s & 2.32 s \\
+\hline
+\textbf{System Throughput} & 453.70 ops/s & 431.72 ops/s \\
+\hline
+\textbf{Average Request Latency} & 2.20 ms & 2.31 ms \\
+\hline
+\end{tabular}
+\caption{workloadReadMiss}
+\label{t_readMiss}
+\end{table}
+
+%%% TABELLA 9
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
+\hline
+\textbf{Total Completed Operations} & 2500 ops & 2500 ops \\
+\hline
+\textbf{Total Execution Time} & 2.14 s & 2.13 s \\
+\hline
+\textbf{System Throughput} & 1170.94 ops/s & 1172.66 ops/sec \\
+\hline
+\textbf{Average Request Latency} & 20.35 ms & 20.10 ms \\
+\hline
+\end{tabular}
+\caption{workloadStressTest}
+\label{t_stressTest}
+\end{table}
+
+\noindent
+\underline{Oss:} Per \textbf{consistency level} = \texttt{QUORUM, ALL} potrebbero fallire le richieste per \textbf{timeout}, impostato di default a 2 secondi da Cassandra (comportamento osservabile nel \textit{workloadConsistency}).
+
+\subsection{Test con Variazione del Numero di Nodi}
+In questa sezione saranno analizzati i risultati dei workload che prevedono la variazione del numero di nodi, in particolare abbiamo testato il comportamento nel range tra 1 e 4 nodi e \textit{ReplicationFactor} = 3, per le ragioni esposte precedentemente (si veda sezione \ref{s_risultati2} per maggiori dettagli).\newline\newline
+\noindent
+Di seguito le \textbf{performance} per ogni scenario:
+
+%%% TABELLA 6
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
+\hline
+\textbf{Total Completed Operations} & 2500 ops & 2500 ops \\
+\hline
+\textbf{Total Execution Time} & 1.09 seconds & 1.43 seconds \\
+\hline
+\textbf{System Throughput} & 2304.05 ops/sec & 1750.81 ops/sec \\
+\hline
+\textbf{Average Request Latency} & 10.46 ms & 13.41 ms \\
+\hline
+\end{tabular}
+\caption{workloadScalability con 1 nodo}
+\label{t_1node}
+\end{table}
+
+%%% TABELLA 7
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
+\hline
+\textbf{Total Completed Operations} & 2500 ops & 2500 ops \\
+\hline
+\textbf{Total Execution Time} & 1.49 seconds & 2.38 seconds \\
+\hline
+\textbf{System Throughput} & 1683.11 ops/sec & 1050.75 ops/sec \\
+\hline
+\textbf{Average Request Latency} & 14.27 ms & 22.75 ms \\
+\hline
+\end{tabular}
+\caption{workloadScalability con 2 nodi}
+\label{t_2nodes}
+\end{table}
+
+%%% TABELLA 8
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
+\hline
+\textbf{Total Completed Operations} & 2500 ops & 2500 ops \\
+\hline
+\textbf{Total Execution Time} & 1.83 seconds & 5.01 seconds \\
+\hline
+\textbf{System Throughput} & 1367.76 ops/sec & 499.00 ops/sec \\
+\hline
+\textbf{Average Request Latency} & 17.50 ms & 48.24 ms \\
+\hline
+\end{tabular}
+\caption{workloadScalability con 4 nodi}
+\label{t_4nodes}
+\end{table}
+
+\noindent
+\underline{Oss:} In questo caso si può notare che la scalabilità é al contrario da quanto ci si potrebbe aspettare teoricamente, ovvero con una \textbf{proporzionalità linearmente crescente} (come spiegato in sezione \ref{s_architettura}).\newline
+Questo può essere attribuito al fatto che i container, pur simulando diversi nodi, risiedono comunque sulla stessa \textbf{infrastruttura hardware}, invalidando di fatto il risultato atteso. Uno sviluppo futuro del progetto sarebbe qundi quello di eseeguire diversi nodi su diverse macchine virtuali per disaccoppiare di conseguenza anche l'hardware (come spiegato nelle conclusione alla sezione \ref{s_conclusioni}).
+\newline\newline
+\noindent
+L'ultimo workload da analizzare é \texttt{workloadFaultTolerance*} che si divide nelle rispettive componenti \textit{workloadFaultToleranceONE.py}, \textit{workloadFaultToleranceQUORUM.py}, \textit{workloadFaultToleranceALL.py}.\newline
+In questo caso non ci saranno delle vere e proprie metriche di performance, quanto la capacità di poter portare a termine le richieste effettuate dall'utente, combinando il numero di nodi e i \textbf{consistency level}:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{} & \textbf{ONE} & \textbf{QUORUM} & \textbf{ALL} \\
+\hline
+\textbf{1 Nodo}    & \ding{51} & fallisce & fallisce \\
+\hline
+\textbf{2 Nodi} & \ding{51} & fallisce & fallisce \\
+\hline
+\textbf{3 Nodi}    & \ding{51} & \ding{51} & fallisce \\
+\hline
+\textbf{4 Nodi}    & \ding{51} & \ding{51} & \ding{51} \\
+\hline
+\end{tabular}
+\caption{workloadFaultTolerance}
+\label{t_faultTolerance}
+\end{table}
 
 \section{How to Run}
 L'intero progetto è sviluppato in Python e richiede l'installazione di alcune dipendenze esterne, in particolare le librerie \texttt{cassandra-driver} e \texttt{Faker}. Per una corretta gestione delle dipendenze è consigliato creare un ambiente virtuale dedicato (\texttt{venv}), in modo da isolare le librerie del progetto dal resto del sistema.\newline\newline
@@ -369,9 +573,11 @@ file \texttt{schema.cql}.
 
 \subsection{Popolamento del database}
 
-Una volta creato lo schema, il database può essere popolato con dati sintetici eseguendo lo script Python dedicato:
+Una volta creato lo schema, il database può essere lanciato con dati sintetici eseguendo gli script Python relativi ai workload:
 
-\texttt{python3 dbLogic.py}
+\texttt{cd workloads}
+
+\texttt{python3 <NOME\_WORKLOAD>.py}
 
 \subsection{Accesso alla shell CQL}
 
@@ -411,6 +617,27 @@ Per eliminare sia i container sia i volumi associati:
 
 \texttt{sudo docker compose down -v}
 
-\section{Conclusioni}
+\section{Conclusioni} \label{s_conclusioni}
+
+L'analisi sperimentale condotta su un cluster \textbf{Apache Cassandra} ha permesso di verificare sul campo le caratteristiche di scalabilità, tolleranza ai guasti e gestione dei carichi di lavoro in un contesto di social network distribuito. I test eseguiti hanno evidenziato come le prestazioni e la disponibilità del sistema siano strettamente correlate alla configurazione dei nodi e ai livelli di consistenza scelti.
+
+\subsection{Analisi delle Performance e Carico dei Nodi}
+Le prove effettuate sul cluster (configurato con 4 nodi e Replication Factor 3) hanno mostrato un sistema capace di gestire un throughput di circa \textbf{71.76 ops/s} con una latenza media contenuta di \textbf{6.84 ms} in condizioni di carico standard.\newline\newline
+\noindent
+Un risultato di particolare rilievo riguarda l'efficienza dei nodi nella gestione delle letture: grazie all'implementazione dei \textbf{Bloom Filter}, la differenza di latenza tra una lettura andata a buon fine (\textit{Read Hit}) e una su dati inesistenti (\textit{Read Miss}) è risultata minima (rispettivamente \textbf{2.20 ms} e \textbf{2.31 ms}), dimostrando come i nodi possano evitare accessi inutili al disco. Tuttavia, la dimensione dei dati (\textit{payload}) influisce drasticamente sulle prestazioni: il passaggio da un payload di 1 KB a uno di 100 KB ha causato un crollo del throughput da \textbf{486.03 ops/s} a \textbf{90.46 ops/s}, con un aumento della latenza di oltre cinque volte.
+
+\subsection{Scalabilità e Vincoli Hardware}
+Contrariamente alle aspettative di una crescita lineare delle prestazioni, i test di scalabilità hanno mostrato che l'aggiunta di nodi in un ambiente containerizzato locale (su singola macchina con 16 GB di RAM) ha portato a un \textbf{degrado delle prestazioni}. Il throughput in scrittura è sceso da \textbf{2304.05 ops/s} con un singolo nodo a \textbf{1367.76 ops/s} con quattro nodi. Questo fenomeno evidenzia come l'overhead di gestione di multipli container Docker e la comunicazione inter-nodo saturino rapidamente le risorse hardware limitate (CPU i5 e memoria), rendendo controproducente l'espansione del cluster in assenza di un'infrastruttura distribuita reale \cite{38, 41}.
+
+\subsection{Tolleranza ai Guasti e Consistenza}
+Le prove di \textit{Fault Tolerance} hanno confermato empiricamente il \textbf{teorema CAP} e la natura \textit{Tunable Consistency} di Cassandra:
+\begin{itemize}
+    \item \textbf{Consistency ONE}: Si è dimostrata la modalità più resiliente, permettendo al sistema di operare correttamente anche con un solo nodo attivo su quattro.
+    \item \textbf{Consistency QUORUM}: Ha garantito l'operatività solo con la maggioranza dei nodi attivi (almeno 3 su 4), fallendo sistematicamente in scenari di guasto più severi.
+    \item \textbf{Consistency ALL}: Ha mostrato la massima fragilità, dove il fallimento di un singolo nodo ha reso impossibile il completamento delle richieste.
+\end{itemize}
+
+\noindent
+In conclusione, l'esperienza ha dimostrato che Cassandra è estremamente efficace per applicazioni \textit{Query-Driven} ad alta disponibilità, ma richiede una calibrazione accurata dei parametri di replica e un'infrastruttura hardware adeguata per poter beneficiare della scalabilità orizzontale. La gestione intelligente dei nodi e dei livelli di consistenza permette di bilanciare correttamente le esigenze di velocità e affidabilità richieste dal dominio applicativo dei social network.
 
 \end{document}
