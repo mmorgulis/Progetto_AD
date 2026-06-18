@@ -11,6 +11,7 @@
 \usepackage{titlesec}
 \usepackage{booktabs}
 \usepackage{pifont}
+\usepackage{todonotes}
 \geometry{a4paper, margin=1in}
 
 \titleformat{\section}
@@ -506,6 +507,72 @@ In questo caso non ci saranno delle vere e proprie metriche di performance, quan
 \label{t_faultTolerance}
 \end{table}
 
+\subsection{Test su Macchine Distinte} \label{s_test_dist}
+Poiché l'esecuzione soprattutto di \texttt{workloadScalability} é molto influenzata dal fatto che i nodi si trovino sulla stessa macchina, seppur in container diversi, per questo workload sono stati eseguiti 3 nodi ognuno su un \textbf{PC diverso} (tutto ciò é stato fatto sul branch \texttt{lan} per differenziarsi dalla configurazione in locale).\newline
+I risultati di ciò sono i seguenti:
+
+\todo[inline]{Riempire con i dati}
+
+%%% TABELLA 6
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
+\hline
+\textbf{Total Completed Operations} & X ops & X ops \\
+\hline
+\textbf{Total Execution Time} & X seconds & X seconds \\
+\hline
+\textbf{System Throughput} & X ops/sec & X ops/sec \\
+\hline
+\textbf{Average Request Latency} & X ms & X ms \\
+\hline
+\end{tabular}
+\caption{workloadScalability con 1 nodo su 3 macchine distinte}
+\label{t_1node_dist}
+\end{table}
+
+%%% TABELLA 7
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
+\hline
+\textbf{Total Completed Operations} & X ops & X ops \\
+\hline
+\textbf{Total Execution Time} & X seconds & X seconds \\
+\hline
+\textbf{System Throughput} & X ops/sec & X ops/sec \\
+\hline
+\textbf{Average Request Latency} & X ms & X ms \\
+\hline
+\end{tabular}
+\caption{workloadScalability con 2 nodi su 3 macchine distinte}
+\label{t_2nodes_dist}
+\end{table}
+
+%%% TABELLA 8
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
+\hline
+\textbf{Total Completed Operations} & 2500 ops & 2500 ops \\
+\hline
+\textbf{Total Execution Time} & 7.99 seconds & 3.22 seconds \\
+\hline
+\textbf{System Throughput} & 312.84 ops/sec & 776.79 ops/sec \\
+\hline
+\textbf{Average Request Latency} & 75.84 ms & 31.46 ms \\
+\hline
+\end{tabular}
+\caption{workloadScalability con 3 nodi su 3 macchine distinte}
+\label{t_3nodes_dist}
+\end{table}
+
 \section{How to Run}
 L'intero progetto è sviluppato in Python e richiede l'installazione di alcune dipendenze esterne, in particolare le librerie \texttt{cassandra-driver} e \texttt{Faker}. Per una corretta gestione delle dipendenze è consigliato creare un ambiente virtuale dedicato (\texttt{venv}), in modo da isolare le librerie del progetto dal resto del sistema.\newline\newline
 \noindent
@@ -627,10 +694,14 @@ Le prove effettuate sul cluster (configurato con 4 nodi e Replication Factor 3) 
 Un risultato di particolare rilievo riguarda l'efficienza dei nodi nella gestione delle letture: grazie all'implementazione dei \textbf{Bloom Filter}, la differenza di latenza tra una lettura andata a buon fine (\textit{Read Hit}) e una su dati inesistenti (\textit{Read Miss}) è risultata minima (rispettivamente \textbf{2.20 ms} e \textbf{2.31 ms}), dimostrando come i nodi possano evitare accessi inutili al disco. Tuttavia, la dimensione dei dati (\textit{payload}) influisce drasticamente sulle prestazioni: il passaggio da un payload di 1 KB a uno di 100 KB ha causato un crollo del throughput da \textbf{486.03 ops/s} a \textbf{90.46 ops/s}, con un aumento della latenza di oltre cinque volte.
 
 \subsection{Scalabilità e Vincoli Hardware}
-Contrariamente alle aspettative di una crescita lineare delle prestazioni, i test di scalabilità hanno mostrato che l'aggiunta di nodi in un ambiente containerizzato locale (su singola macchina con 16 GB di RAM) ha portato a un \textbf{degrado delle prestazioni}. Il throughput in scrittura è sceso da \textbf{2304.05 ops/s} con un singolo nodo a \textbf{1367.76 ops/s} con quattro nodi. Questo fenomeno evidenzia come l'overhead di gestione di multipli container Docker e la comunicazione inter-nodo saturino rapidamente le risorse hardware limitate (CPU i5 e memoria), rendendo controproducente l'espansione del cluster in assenza di un'infrastruttura distribuita reale \cite{38, 41}.
+Contrariamente alle aspettative di una crescita lineare delle prestazioni, i test di scalabilità hanno mostrato che l'aggiunta di nodi in un ambiente containerizzato locale (su singola macchina con 16 GB di RAM) ha portato a un \textbf{degrado delle prestazioni}. Il throughput in scrittura è sceso da \textbf{2304.05 ops/s} con un singolo nodo a \textbf{1367.76 ops/s} con quattro nodi. Questo fenomeno evidenzia come l'overhead di gestione di multipli container Docker e la comunicazione inter-nodo saturino rapidamente le risorse hardware limitate (CPU i5 e memoria), rendendo controproducente l'espansione del cluster in assenza di un'infrastruttura distribuita reale.\newline\newline
+\noindent
+Come quindi spiegato nella sezione \ref{s_test_dist} sono state eseguiti 3 nodi su 3 macchine diverse e ciò ha portato a XXXXXXXXXXXXXXXXXXXXXX
+
+\todo[inline]{Conclusioni sui nodi distribuiti}
 
 \subsection{Tolleranza ai Guasti e Consistenza}
-Le prove di \textit{Fault Tolerance} hanno confermato empiricamente il \textbf{teorema CAP} e la natura \textit{Tunable Consistency} di Cassandra:
+Le prove di \textit{Fault Tolerance} hanno confermato empiricamente il \textbf{CAP theorem} e la natura \textit{Tunable Consistency} di Cassandra:
 \begin{itemize}
     \item \textbf{Consistency ONE}: Si è dimostrata la modalità più resiliente, permettendo al sistema di operare correttamente anche con un solo nodo attivo su quattro.
     \item \textbf{Consistency QUORUM}: Ha garantito l'operatività solo con la maggioranza dei nodi attivi (almeno 3 su 4), fallendo sistematicamente in scenari di guasto più severi.
@@ -638,6 +709,6 @@ Le prove di \textit{Fault Tolerance} hanno confermato empiricamente il \textbf{t
 \end{itemize}
 
 \noindent
-In conclusione, l'esperienza ha dimostrato che Cassandra è estremamente efficace per applicazioni \textit{Query-Driven} ad alta disponibilità, ma richiede una calibrazione accurata dei parametri di replica e un'infrastruttura hardware adeguata per poter beneficiare della scalabilità orizzontale. La gestione intelligente dei nodi e dei livelli di consistenza permette di bilanciare correttamente le esigenze di velocità e affidabilità richieste dal dominio applicativo dei social network.
+In conclusione, l'esperienza ha dimostrato che Cassandra è estremamente efficace per applicazioni \textbf{Query-Driven} ad alta disponibilità, ma richiede una calibrazione accurata dei parametri di replica e un'infrastruttura hardware adeguata per poter beneficiare della scalabilità orizzontale. La gestione intelligente dei nodi e dei livelli di consistenza permette di bilanciare correttamente le esigenze di velocità e affidabilità richieste dal dominio applicativo dei social network.
 
 \end{document}
