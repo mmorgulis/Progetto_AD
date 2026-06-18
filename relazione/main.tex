@@ -23,13 +23,17 @@
   {\bfseries\large}
   {\thesubsection}{1em}{}
 
-\title{Apache Cassandra: descrizione e prove sui nodi \\ \large Progetto di Architetture Dati}
+\title{Apache Cassandra: teoria e pratica \\ \large Progetto di Architetture Dati}
 \author{Coldani Andrea mat.894684, Colonetti Fabio mat.899689}
 \date{18 Giugno 2026}
 
 \begin{document}
 
 \maketitle
+
+\begin{center}
+\href{https://github.com/mmorgulis/Progetto_AD}{Link al codice del progetto}
+\end{center}
 
 \vspace{1cm}
 \tableofcontents
@@ -43,8 +47,8 @@ Cassandra rappresenta una sintesi ingegneristica tra due modelli fondamentali: i
 Cassandra é progettata per essere una soluzione NoSQL altamente scalabile che elimina ogni \textit{single point of failure} attraverso un'architettura decentralizzata.
 
 \subsection{Cap theorem} \label{s_cap}
-Il \textbf{CAP theorem} é molto significativo per comprendere gli aspetti fondamentali relativi a Cassandra.\newline\newline
-Innanzitutto vanno definiti i seguenti conetti:
+Il \textbf{CAP theorem} é molto significativo per comprendere gli aspetti fondamentali relativi a Cassandra.\newline
+Innanzitutto vanno definiti i seguenti concetti:
 \begin{itemize}
     \item \textbf{Consistency}: garantisce che tutti i nodi del sistema osservino una vista coerente dei dati. In particolare, ogni operazione di lettura restituisce l’ultimo valore scritto, indipendentemente dal nodo interrogato.
 
@@ -117,9 +121,9 @@ A differenza dei database relazionali, Cassandra adotta un approccio \textbf{Wid
 \end{itemize}
 
 \subsection{Modellazione dei Dati Query-Driven} \label{s_denormalization}
-In Cassandra, la modellazione dei dati segue un approccio \textbf{Query-Driven}, ovvero conviene progettarla a partire dalle query che l'applicazione dovrà eseguire più frequentemente, anziché dalla rappresentazione delle entità e delle loro relazioni come avviene nei database relazionali.\newline
+In Cassandra, la modellazione dei dati segue un approccio \textbf{Query-Driven}, ovvero conviene progettare il database a partire dalle query che l'applicazione dovrà eseguire più frequentemente, anziché dalla rappresentazione delle entità e delle loro relazioni come avviene nei database relazionali.\newline
 Per questo motivo, le tabelle vengono create e organizzate in modo da consentire l'accesso diretto ai dati necessari per uno specifico caso d'uso. Ciò porta spesso a una \textbf{denormalizzazione} dei dati, ovvero alla duplicazione controllata delle informazioni in più tabelle per ottimizzare le operazioni di lettura.\newline
-Questo approccio riduce la necessità di operazioni costose come \textbf{join} e aggregazioni, che Cassandra non supporta in modo efficiente, garantendo prestazioni elevate e tempi di risposta prevedibili anche su grandi quantità di dati.\newline
+Questo approccio riduce la necessità di operazioni costose come \textbf{join} e aggregazioni, che Cassandra non supporta, garantendo prestazioni elevate e tempi di risposta prevedibili anche su grandi quantità di dati.\newline
 Cassandra risulta quindi particolarmente efficiente in sistemi con un \textbf{insieme limitato} e ben definito di \textbf{query}, dove i pattern di accesso ai dati sono noti a priori e i requisiti di scalabilità e disponibilità sono elevati.
 
 \subsection{Meccanismi di Partizionamento e Scalabilità}
@@ -223,8 +227,9 @@ Di seguito uno schema di quanto detto:
 
 \subsection{Dominio applicativo}
 Il dominio riguarda la progettazione e gestione di un \textbf{social network} distribuito (Twitter-like), in cui gli utenti possono registrarsi, creare e condividere post anche con contenuti multimediali, seguire altri utenti e consultare un feed personalizzato dei contenuti pubblicati dalle persone che seguono.\newline\newline
-I \textbf{contenuti multimediali} non vengono realmente memorizzati nel database Cassandra, ma sono rappresentati tramite generazioni di bit casuali o link fittizi, con lo scopo di simulare la presenza di foto e video che, in un’architettura reale, sarebbero tipicamente archiviati in sistemi esterni dedicati allo storage distribuito.\newline\newline
-Un \textbf{utente} è definito da \textit{username}, \textit{email}, \textit{password} hashata, \textit{nome}, \textit{cognome} e un'eventuale \textit{immagine profilo}.
+I \textbf{contenuti multimediali} relativi ai post non vengono realmente memorizzati nel database Cassandra, ma sono rappresentati tramite generazioni di bit casuali o link fittizi, con lo scopo di simulare la presenza di foto e video che, in un’architettura reale, sarebbero tipicamente archiviati in sistemi esterni dedicati allo storage distribuito.\newline\newline
+Un \textbf{utente} è definito da \textit{username}, \textit{email}, \textit{password} hashata, \textit{nome}, \textit{cognome} e un'eventuale \textit{immagine profilo}. In questo caso, dato che le immagini profilo sono tipicamente piccole, sono memorizzate 
+come colonna della tabella, simulate come byte randomici.
 Un \textbf{post} è definito dallo \textit{username} (ovvero l'utente che lo ha pubblicato), da un \textit{id} (generato a partire dall'username e dal timestamp), dal \textit{testo} e possibilmente una \textit{risorsa multimediale} e una \textit{location}. Inoltre sono definite le tabelle \textbf{followers\_by\_user} e \textbf{following\_by\_user} per tracciare le relazioni tra utenti.
 
 \subsection{Architettura codice} \label{s_architettura}
@@ -234,9 +239,9 @@ Successivamente sono state eseguite anche prove di \textbf{fault tolerance}, sim
 \newline\newline
 Le componenti principali del codice sono:
 \begin{itemize}
-    \item \texttt{dbLogic.py}: Gestisce la logica del database e le operazioni correlate per il suo setup
-    \item \texttt{docker-compose.yml}: avvia un cluster Cassandra a \textit{n} nodi in Docker, configurando un cluster chiamato “CassandraCluster” con replica tra nodi, persistenza dei dati su volumi separati e controlli di healthcheck e dipendenze di avvio tra i servizi
-    \item \texttt{schema.cql}: definisce il keyspace e le tabelle del database, modellando utenti, post, feed e relazioni di follower/following ottimizzati per query specifiche: profilo, timeline e rete sociale
+    \item \texttt{dbLogic.py}: Gestisce la logica del database e le operazioni correlate per il suo setup;
+    \item \texttt{docker-compose.yml}: avvia un cluster Cassandra a \textit{n} nodi in Docker, configurando un cluster chiamato “CassandraCluster” con replica tra nodi, persistenza dei dati su volumi separati e controlli di healthcheck e dipendenze di avvio tra i servizi;
+    \item \texttt{schema.cql}: definisce il keyspace e le tabelle del database, modellando utenti, post, feed e relazioni di follower/following ottimizzati per query specifiche: profilo, timeline e rete sociale;
     \item \texttt{workload*.py}: si occupa del popolamento dei dati e della simulazione di operazioni su diverse configurazioni del sistema, al fine di riprodurre scenari realistici di utilizzo.
 \end{itemize}
 
@@ -269,7 +274,9 @@ Infine, vengono definiti volumi persistenti separati per ciascun nodo, assicuran
 \subsection{dbLogic.py} \label{s_dbLogic}
 Implementa la logica applicativa: la classe principale \texttt{DBLogic} gestisce la connessione al cluster, la configurazione del keyspace e la preparazione delle query CQL, ottimizzando le prestazioni tramite l’uso di \textbf{prepared statements}, ovvero query che vengono precompilate e analizzate una sola volta dal database. In fase di esecuzione, tali query ricevono esclusivamente i parametri dinamici, evitando così la ripetizione delle operazioni di parsing e pianificazione dell’esecuzione ad ogni richiesta e riducendo significativamente l’overhead computazionale.\newline\newline
 \noindent
-Una parte centrale del sistema è la generazione di dati realistici, realizzata tramite la libreria \texttt{Faker}. Vengono creati utenti, post e relazioni sociali (following/followers) con \textbf{distribuzioni probabilistiche} che simulano comportamenti realistici, come il numero variabile di post per utente e la presenza opzionale di contenuti multimediali (per esempio un post deve avere un testo mentre una risorsa audio/video non é obbligatoria).\newline
+Una parte centrale del sistema è la generazione di dati realistici, realizzata tramite la libreria \texttt{Faker}. Vengono creati utenti, post e relazioni sociali (following/followers) con \textbf{distribuzioni probabilistiche} che simulano comportamenti realistici, come il numero variabile di post per utente e la presenza opzionale di contenuti multimediali (per esempio un post deve avere un testo mentre una risorsa audio/video non é obbligatoria). Ad esempio, per quanto riguarda la creazione degli utenti, 
+viene usata questa distribuzione: l'utente non ha una foto profilo il 50\% delle volte, nei restanti casi, può presentare con la stessa probabilità una foto profilo che pesa rispettivamente 1Kb, 5KB, 10KB. Oppure, per quanto riguarda il numero di post per ciascun utente, la distribuzione 
+segue una curva tipica dei social, in particolare una buona parte degli utenti ha 0/1 post pubblicati, pochi ne hanno alcuni e ancora meno hanno molti post. La stessa logica è stata seguita anche per il numero di seguiti.\newline
 La libreria \texttt{Faker} può generare potenziali duplicati, poiché attinge da un insieme limitato di dati predefiniti. Per questo motivo è stato necessario introdurre una struttura dati di tipo \texttt{set}, utilizzata per garantire l’unicità degli identificativi (in particolare degli username), evitando così inserimenti duplicati e mantenendo l’integrità delle chiavi primarie nel database.\newline\newline
 \noindent
 Per migliorare le prestazioni in fase di popolamento del database, il codice utilizza \textbf{esecuzioni concorrenti} tramite il metodo del driver Python di Cassandra \newline \texttt{execute\_concurrent\_with\_args}, riducendo significativamente il tempo necessario per inserire grandi quantità di dati: infatti, per inserimenti con più di 15 elementi (parametro opportunamente scelto), l'utilizzo del metodo consente di eseguire più operazioni in parallelo anziché in modo sequenziale, in questo modo si riduce il tempo complessivo di esecuzione e si migliora l'utilizzo delle risorse di rete e del client.\newline\newline
@@ -284,8 +291,6 @@ Infine, sono presenti funzioni di inserimento singolo e batch per utenti, post e
 Implementa gli \textbf{scenari} di utilizzo volti a simulare il comportamento realistico degli utenti di un social network e a misurare le prestazioni del cluster Cassandra in termini di throughput e latenza in varie situazioni.\newline
 Generalmente per ogni scenario viene inizializzato il database con un insieme di utenti, post e relazioni sociali generate automaticamente. Solo in alcuni scenari il sistema avvia più \textbf{thread}, per simulare anche la \textbf{concorrenza}.\newline\newline
 \noindent
-La casualità é affidata all'esecuzione ciclica delle principali operazioni tipiche di un social network secondo una \textbf{distribuzione probabilistica}: consultazione della propria home feed (50\% delle operazioni), creazione di una nuova relazione di follow (30\%) oppure pubblicazione di un post (20\%). In questo modo il benchmark riproduce un carico misto di letture e scritture, più vicino a uno scenario reale rispetto a test sintetici basati su una singola tipologia di query.\newline\newline
-\noindent
 Particolare attenzione è dedicata alla simulazione della strategia \textbf{fan-out on write}, come detto nella sezione \ref{s_dbLogic}. Quando un utente pubblica un nuovo contenuto, il sistema recupera dal database l'elenco reale dei suoi follower e inserisce immediatamente una copia del post nella home feed di ciascuno di essi. Questa scelta consente di valutare il costo computazionale della propagazione dei contenuti in fase di scrittura, approccio comunemente adottato nei social network per velocizzare le successive operazioni di lettura.\newline\newline
 \noindent
 Al termine dell'esecuzione vengono raccolte e analizzate le \textbf{metriche} principali del sistema, tra cui il numero totale di operazioni completate, il throughput espresso in operazioni al secondo e la latenza media delle richieste. Tali misure consentono di valutare il comportamento del cluster Cassandra sotto un carico concorrente e di confrontare l'impatto delle diverse configurazioni o strategie di modellazione dei dati.\newline\newline
@@ -293,13 +298,14 @@ Al termine dell'esecuzione vengono raccolte e analizzate le \textbf{metriche} pr
 Questo componente gestisce le interazioni effettive con il database e le operazioni su di esso; non è quindi costituito da una singola classe, ma da un insieme di classi, come illustrato di seguito:
 
 \begin{itemize}
-    \item \texttt{workloadBase}: carica 1000 utenti, 50 dei quali effettuano ogni 0.5 secondi delle operazioni casuali. Questo componente utilizza 50 \textbf{thread} per simulare la concorrenza nelle operazioni
-    \item \texttt{workloadConsistency}: carica 5000 utenti e fa 1000 operazioni casuali senza concorrenza testando le performance sui 3 diversi \textbf{consistency level}
-    \item \texttt{workloadPayload}: carica 1000 utenti di cui 500 caricano un post con dei file multimediali di 1 \textit{kByte} e 500 caricano dei file multimediali di 100 \textit{kByte}. Questo scenario serve appositamente per testare le performance a differenza di payload dei post
-    \item \texttt{workloadReadMiss}: carica 100 utenti e fa query base su utenti esistenti e non esistenti per testare le performance relative a \textbf{hit} e \textbf{miss} nel database
-    \item \texttt{workloadStressTest}: carica 25 utenti in concorrenza; lancia quindi 25 thread che effettuano 100 caricamenti ognuno di post in parallelo per testare una situazione di stress
-    \item \texttt{workloadScalability}: é uno script shell che utilizza Docker per automatizzare la configurazione ed esecuzione di nodi distinti per poter testare il comportamento all'\textbf{aumentare dei nodi}. In particolare, avvia il nodo 1 ed esegue il \textit{workloadStressTest}; successivamente avvia il nodo 2 e ripete lo stesso test. Infine, procede con l’avvio dei nodi 3 e 4, eseguendo nuovamente il \textit{workloadStressTest}
-    \item \texttt{workloadFaultTolerance*}: Si simula il carico di un utente che esegue un’operazione al secondo, testando il sistema in diverse configurazioni del \textbf{consistency level} (si veda Sezione \ref{s_cap}): pertanto questo workload é suddiviso in 3 file (\textit{workloadFaultToleranceONE.py}, \textit{workloadFaultToleranceQUORUM.py}, \textit{workloadFaultToleranceALL.py}). Inoltre, per ognuno dei 3 consistency level è stata valutata la \textbf{caduta dei nodi}: per un cluster di \( n \) nodi, sono state eseguite 5 richieste, dopodiché è stato fatto fallire un nodo; successivamente sono state inviate altre 5 richieste e si è proceduto alla caduta di un ulteriore nodo. Tale processo è stato ripetuto per \( n-1 \) iterazioni, fino al guasto progressivo di tutti i nodi tranne uno. Questa procedura è stata eseguita per ciascun consistency level considerato.
+    \item \texttt{workloadBase}: inizializza il database con 1000 utenti e simula che 50 di questi effettuino ogni 0.5 secondi delle operazioni di lettura o scrittura. In particolare sono state effettuate le principali operazioni tipiche di un social network secondo la seguente \textbf{distribuzione probabilistica}: consultazione della propria home feed (50\% delle operazioni), pubblicazione di un post (30\%) oppure creazione di una nuova relazione di follow (20\%). In questo modo il benchmark riproduce un carico misto di letture e scritture, più vicino a uno scenario reale rispetto a test sintetici basati su una singola tipologia di query;
+    \item \texttt{workloadConsistency}: partendo da database inizializzato con 100 utenti, carica 5000 utenti e effettua 1000 operazioni casuali senza concorrenza testando le performance sui 3 diversi \textbf{consistency level};
+    \item \texttt{workloadImagePayload}: partendo da database vuoto, carica 1000 utenti 2 volte, la prima gli utenti hanno un immagine profilo che pesa 1KB, mentre la seconda 100KB. Questo scenario serve appositamente per testare le performance a differenza di payload degli utenti;
+    \item \texttt{workloadReadMiss}: inizializza il database con 100 utenti e simula su utenti esistenti e non esistenti per testare le performance relative a \textbf{hit} e \textbf{miss} nel database;
+    \item \texttt{workloadStressTest}: partendo dal database inizializzato con 1000 utenti, simula che 100 utenti (threads) effettuino 500 caricamenti ognuno di post in parallelo alla lettura del feed per testare una situazione di stress in lettura e scrittura;
+    \item \texttt{workloadScalability}: é uno script shell che utilizza Docker per automatizzare la configurazione ed esecuzione di nodi distinti per poter testare il comportamento all'\textbf{aumentare dei nodi}. In particolare, avvia il nodo 1 ed esegue il \textit{workloadStressTest}; successivamente avvia il nodo 2 e ripete lo stesso test. Infine, procede con l’avvio dei nodi 3 e 4, eseguendo nuovamente il \textit{workloadStressTest};
+    \item \texttt{workloadFaultTolerance*}: si simula il carico di un utente che esegue un’operazione al secondo, testando il sistema in diverse configurazioni del \textbf{consistency level} (si veda Sezione \ref{s_cap}): pertanto questo workload é suddiviso in 3 file (\textit{workloadFaultToleranceONE.py}, \textit{workloadFaultToleranceQUORUM.py}, \textit{workloadFaultToleranceALL.py}). Inoltre, per ognuno dei 3 consistency level è stata valutata la \textbf{caduta dei nodi}: per un cluster di \( n \) nodi, sono state eseguite 5 richieste, dopodiché è stato fatto fallire un nodo; successivamente sono state inviate altre 5 richieste e si è proceduto alla caduta di un ulteriore nodo. Tale processo è stato ripetuto per \( n-1 \) iterazioni, fino al guasto progressivo di tutti i nodi tranne uno. Questa procedura è stata eseguita per ciascun consistency level considerato.
+    \item \texttt{workloadMemStressTest}: questo workload vuole testare la quantità di memoria utilizzabile prima del degratamento delle performance (latenza), quindi carica 1000 utenti alla volta con 1KB di payload, finchè la latenza non degrada di un fattore 2 per più di 3 inserimenti.
 \end{itemize}
 
 \noindent
@@ -399,13 +405,13 @@ Di seguito le \textbf{performance} per ogni singolo scenario:
 \hline
 \textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
 \hline
-\textbf{Total Completed Operations} & 2500 ops & 2500 ops \\
+\textbf{Total Completed Operations} & 50000 ops & 50000 ops \\
 \hline
-\textbf{Total Execution Time} & 2.14 s & 2.13 s \\
+\textbf{Total Execution Time} & 22.35 s & 25.70 s \\
 \hline
-\textbf{System Throughput} & 1170.94 ops/s & 1172.66 ops/sec \\
+\textbf{System Throughput} & 2236.91 ops/s & 1945.71 ops/sec \\
 \hline
-\textbf{Average Request Latency} & 20.35 ms & 20.10 ms \\
+\textbf{Average Request Latency} & 44.21 ms & 51.02 ms \\
 \hline
 \end{tabular}
 \caption{workloadStressTest}
@@ -485,6 +491,7 @@ Di seguito le \textbf{performance} per ogni scenario:
 Questo può essere attribuito al fatto che i container, pur simulando diversi nodi, risiedono comunque sulla stessa \textbf{infrastruttura hardware}, invalidando di fatto il risultato atteso. Uno sviluppo futuro del progetto sarebbe qundi quello di eseeguire diversi nodi su diverse macchine virtuali per disaccoppiare di conseguenza anche l'hardware (come spiegato nelle conclusione alla sezione \ref{s_conclusioni}).
 \newline\newline
 \noindent
+Il risultati di \texttt{workloadMemStressTest} mostrano che le performance il scrittura non si degradano quasi per nulla, infatti il test mostra che è possibile inserire fino a 1 milione di utenti (circa 1GB di dati per nodo) senza che esse degradino.\newline
 L'ultimo workload da analizzare é \texttt{workloadFaultTolerance*} che si divide nelle rispettive componenti \textit{workloadFaultToleranceONE.py}, \textit{workloadFaultToleranceQUORUM.py}, \textit{workloadFaultToleranceALL.py}.\newline
 In questo caso non ci saranno delle vere e proprie metriche di performance, quanto la capacità di poter portare a termine le richieste effettuate dall'utente, combinando il numero di nodi e i \textbf{consistency level}:
 
@@ -508,7 +515,7 @@ In questo caso non ci saranno delle vere e proprie metriche di performance, quan
 \end{table}
 
 \subsection{Test su Macchine Distinte} \label{s_test_dist}
-Poiché l'esecuzione soprattutto di \texttt{workloadScalability} é molto influenzata dal fatto che i nodi si trovino sulla stessa macchina, seppur in container diversi, per questo workload sono stati eseguiti 3 nodi ognuno su un \textbf{PC diverso} (tutto ciò é stato fatto sul branch \texttt{lan} per differenziarsi dalla configurazione in locale).\newline
+Poiché l'esecuzione soprattutto di \texttt{workloadScalability} é molto influenzata dal fatto che i nodi si trovino sulla stessa macchina, seppur in container diversi, per questo workload sono stati eseguiti 3 nodi (RF = 1) ognuno su un \textbf{PC diverso} (tutto ciò é stato fatto sul branch \texttt{lan} per differenziarsi dalla configurazione in locale).\newline
 I risultati di ciò sono i seguenti:
 
 %%% TABELLA 6
@@ -518,13 +525,13 @@ I risultati di ciò sono i seguenti:
 \hline
 \textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
 \hline
-\textbf{Total Completed Operations} & 2500 ops & 2500 ops \\
+\textbf{Total Completed Operations} & 200000 ops & 200000 ops \\
 \hline
-\textbf{Total Execution Time} & 1.02 seconds & 2.01 seconds \\
+\textbf{Total Execution Time} & 252.55 seconds & 315.71 seconds \\
 \hline
-\textbf{System Throughput} & 2442.88 ops/sec & 1242.17 ops/sec \\
+\textbf{System Throughput} & 791.93 ops/sec & 633.49 ops/sec \\
 \hline
-\textbf{Average Request Latency} & 9.95 ms & 19.74 ms \\
+\textbf{Average Request Latency} & 251.04 ms & 313.86 ms \\
 \hline
 \end{tabular}
 \caption{workloadScalability con 1 nodo su 3 macchine distinte}
@@ -540,11 +547,11 @@ I risultati di ciò sono i seguenti:
 \hline
 \textbf{Total Completed Operations} & 200000 ops & 200000 ops \\
 \hline
-\textbf{Total Execution Time} & 81.93 seconds & 103.02 seconds \\
+\textbf{Total Execution Time} & 261.27 seconds & 423.88 seconds \\
 \hline
-\textbf{System Throughput} & 2441.00 ops/sec & 1941.43 ops/sec \\
+\textbf{System Throughput} & 765.50 ops/sec & 471.83 ops/sec \\
 \hline
-\textbf{Average Request Latency} & 81.14 ms & 102.05 ms \\
+\textbf{Average Request Latency} & 258.53 ms & 422.18 ms \\
 \hline
 \end{tabular}
 \caption{workloadScalability con 2 nodi su 3 macchine distinte}
@@ -558,18 +565,45 @@ I risultati di ciò sono i seguenti:
 \hline
 \textbf{Performance Metric} & \textbf{INTENSE WRITING} & \textbf{INTENSE READING} \\
 \hline
-\textbf{Total Completed Operations} & 2500 ops & 2500 ops \\
+\textbf{Total Completed Operations} & 200000 ops & 200000 ops \\
 \hline
-\textbf{Total Execution Time} & 7.99 seconds & 3.22 seconds \\
+\textbf{Total Execution Time} & 81.93 seconds & 103.02 seconds \\
 \hline
-\textbf{System Throughput} & 312.84 ops/sec & 776.79 ops/sec \\
+\textbf{System Throughput} & 2441.00 ops/sec & 1941.43 ops/sec \\
 \hline
-\textbf{Average Request Latency} & 75.84 ms & 31.46 ms \\
+\textbf{Average Request Latency} & 81.14 ms & 102.05 ms \\
 \hline
 \end{tabular}
 \caption{workloadScalability con 3 nodi su 3 macchine distinte}
 \label{t_3nodes_dist}
 \end{table}
+
+\section{Conclusioni} \label{s_conclusioni}
+
+L'analisi sperimentale condotta su un cluster \textbf{Apache Cassandra} ha permesso di verificare sul campo le caratteristiche di scalabilità, tolleranza ai guasti e gestione dei carichi di lavoro in un contesto di social network distribuito. I test eseguiti hanno evidenziato come le prestazioni e la disponibilità del sistema siano strettamente correlate alla configurazione dei nodi e ai livelli di consistenza scelti.
+
+\subsection{Analisi delle Performance e Carico dei Nodi}
+Le prove effettuate sul cluster (configurato con 4 nodi e Replication Factor 3) hanno mostrato un sistema capace di gestire un throughput di circa \textbf{71.76 ops/s} con una latenza media contenuta di \textbf{6.84 ms} in condizioni di carico standard.\newline\newline
+\noindent
+Un risultato di particolare rilievo riguarda l'efficienza dei nodi nella gestione delle letture: grazie all'implementazione dei \textbf{Bloom Filter}, la differenza di latenza tra una lettura andata a buon fine (\textit{Read Hit}) e una su dati inesistenti (\textit{Read Miss}) è risultata minima (rispettivamente \textbf{2.20 ms} e \textbf{2.31 ms}), dimostrando come i nodi possano evitare accessi inutili al disco. Tuttavia, la dimensione dei dati (\textit{payload}) influisce drasticamente sulle prestazioni: il passaggio da un payload di 1 KB a uno di 100 KB ha causato un crollo del throughput da \textbf{486.03 ops/s} a \textbf{90.46 ops/s}, con un aumento della latenza di oltre cinque volte.
+
+\subsection{Scalabilità e Vincoli Hardware}
+Contrariamente alle aspettative di una crescita lineare delle prestazioni, i test di scalabilità hanno mostrato che l'aggiunta di nodi in un ambiente containerizzato locale (su singola macchina con 16 GB di RAM) ha portato a un \textbf{degrado delle prestazioni}. Il throughput in scrittura è sceso da \textbf{2304.05 ops/s} con un singolo nodo a \textbf{1367.76 ops/s} con quattro nodi. Questo fenomeno evidenzia come l'overhead di gestione di multipli container Docker e la comunicazione inter-nodo saturino rapidamente le risorse hardware limitate (CPU i5 e memoria), rendendo controproducente l'espansione del cluster in assenza di un'infrastruttura distribuita reale.\newline\newline
+\noindent
+Invece il test sui 3 nodi reali ha portato a delle conclusioni leggermente diverse: in condizioni di cluster integro (Tabella \ref{t_3nodes_dist}), il sistema mostra una scalabilità del throughput quasi perfettamente lineare, passando dalle \textbf{791.93 ops/s} del singolo nodo a \textbf{2441.00 ops/s} con tre nodi attivi (un incremento del \textasciitilde 308\%), con una latenza minima di \textbf{81.14 ms}. Avendo impostato $RF=1$, l'assenza di traffico di replica permette infatti ai nodi di lavorare in parallelo senza overhead di sincronizzazione.
+
+Al contrario, nei test con nodi offline (Tabelle \ref{t_1node_dist} e \ref{t_2nodes_dist}) si nota un netto calo delle prestazioni, con il throughput che scende sotto le 800 ops/s e la latenza che si attesta intorno ai \textbf{250 ms}. Un aspetto interessante è che i risultati a 1 e 2 nodi sono quasi identici: questo andamento probabilmente è dovuto al fatto che il nodo spento per simulare il guasto era la macchina fisicamente più potente del cluster. Di conseguenza, nei test parziali il carico e la gestione degli errori di rete verso gli IP disconnessi sono gravati interamente sui due host rimasti attivi, che essendo meno performanti hanno appiattito le metriche complessive.
+
+\subsection{Tolleranza ai Guasti e Consistenza}
+Le prove di \textit{Fault Tolerance} hanno confermato empiricamente il \textbf{CAP theorem} e la natura \textit{Tunable Consistency} di Cassandra:
+\begin{itemize}
+    \item \textbf{Consistency ONE}: Si è dimostrata la modalità più resiliente, permettendo al sistema di operare correttamente anche con un solo nodo attivo su quattro.
+    \item \textbf{Consistency QUORUM}: Ha garantito l'operatività solo con la maggioranza dei nodi attivi (almeno 3 su 4), fallendo sistematicamente in scenari di guasto più severi.
+    \item \textbf{Consistency ALL}: Ha mostrato la massima fragilità, dove il fallimento di un singolo nodo ha reso impossibile il completamento delle richieste.
+\end{itemize}
+
+\noindent
+In conclusione, l'esperienza ha dimostrato che Cassandra è estremamente efficace per applicazioni \textbf{Query-Driven} ad alta disponibilità, ma richiede una calibrazione accurata dei parametri di replica e un'infrastruttura hardware adeguata per poter beneficiare della scalabilità orizzontale. La gestione intelligente dei nodi e dei livelli di consistenza permette di bilanciare correttamente le esigenze di velocità e affidabilità richieste dal dominio applicativo dei social network.
 
 \section{How to Run}
 L'intero progetto è sviluppato in Python e richiede l'installazione di alcune dipendenze esterne, in particolare le librerie \texttt{cassandra-driver} e \texttt{Faker}. Per una corretta gestione delle dipendenze è consigliato creare un ambiente virtuale dedicato (\texttt{venv}), in modo da isolare le librerie del progetto dal resto del sistema.\newline\newline
@@ -681,32 +715,5 @@ Per eliminare i container mantenendo i volumi:
 Per eliminare sia i container sia i volumi associati:
 
 \texttt{sudo docker compose down -v}
-
-\section{Conclusioni} \label{s_conclusioni}
-
-L'analisi sperimentale condotta su un cluster \textbf{Apache Cassandra} ha permesso di verificare sul campo le caratteristiche di scalabilità, tolleranza ai guasti e gestione dei carichi di lavoro in un contesto di social network distribuito. I test eseguiti hanno evidenziato come le prestazioni e la disponibilità del sistema siano strettamente correlate alla configurazione dei nodi e ai livelli di consistenza scelti.
-
-\subsection{Analisi delle Performance e Carico dei Nodi}
-Le prove effettuate sul cluster (configurato con 4 nodi e Replication Factor 3) hanno mostrato un sistema capace di gestire un throughput di circa \textbf{71.76 ops/s} con una latenza media contenuta di \textbf{6.84 ms} in condizioni di carico standard.\newline\newline
-\noindent
-Un risultato di particolare rilievo riguarda l'efficienza dei nodi nella gestione delle letture: grazie all'implementazione dei \textbf{Bloom Filter}, la differenza di latenza tra una lettura andata a buon fine (\textit{Read Hit}) e una su dati inesistenti (\textit{Read Miss}) è risultata minima (rispettivamente \textbf{2.20 ms} e \textbf{2.31 ms}), dimostrando come i nodi possano evitare accessi inutili al disco. Tuttavia, la dimensione dei dati (\textit{payload}) influisce drasticamente sulle prestazioni: il passaggio da un payload di 1 KB a uno di 100 KB ha causato un crollo del throughput da \textbf{486.03 ops/s} a \textbf{90.46 ops/s}, con un aumento della latenza di oltre cinque volte.
-
-\subsection{Scalabilità e Vincoli Hardware}
-Contrariamente alle aspettative di una crescita lineare delle prestazioni, i test di scalabilità hanno mostrato che l'aggiunta di nodi in un ambiente containerizzato locale (su singola macchina con 16 GB di RAM) ha portato a un \textbf{degrado delle prestazioni}. Il throughput in scrittura è sceso da \textbf{2304.05 ops/s} con un singolo nodo a \textbf{1367.76 ops/s} con quattro nodi. Questo fenomeno evidenzia come l'overhead di gestione di multipli container Docker e la comunicazione inter-nodo saturino rapidamente le risorse hardware limitate (CPU i5 e memoria), rendendo controproducente l'espansione del cluster in assenza di un'infrastruttura distribuita reale.\newline\newline
-\noindent
-Come quindi spiegato nella sezione \ref{s_test_dist} sono state eseguiti 3 nodi su 3 macchine diverse e ciò ha portato a XXXXXXXXXXXXXXXXXXXXXX
-
-\todo[inline]{Conclusioni sui nodi distribuiti}
-
-\subsection{Tolleranza ai Guasti e Consistenza}
-Le prove di \textit{Fault Tolerance} hanno confermato empiricamente il \textbf{CAP theorem} e la natura \textit{Tunable Consistency} di Cassandra:
-\begin{itemize}
-    \item \textbf{Consistency ONE}: Si è dimostrata la modalità più resiliente, permettendo al sistema di operare correttamente anche con un solo nodo attivo su quattro.
-    \item \textbf{Consistency QUORUM}: Ha garantito l'operatività solo con la maggioranza dei nodi attivi (almeno 3 su 4), fallendo sistematicamente in scenari di guasto più severi.
-    \item \textbf{Consistency ALL}: Ha mostrato la massima fragilità, dove il fallimento di un singolo nodo ha reso impossibile il completamento delle richieste.
-\end{itemize}
-
-\noindent
-In conclusione, l'esperienza ha dimostrato che Cassandra è estremamente efficace per applicazioni \textbf{Query-Driven} ad alta disponibilità, ma richiede una calibrazione accurata dei parametri di replica e un'infrastruttura hardware adeguata per poter beneficiare della scalabilità orizzontale. La gestione intelligente dei nodi e dei livelli di consistenza permette di bilanciare correttamente le esigenze di velocità e affidabilità richieste dal dominio applicativo dei social network.
 
 \end{document}
