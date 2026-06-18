@@ -124,4 +124,4 @@ def run_workload_stress_test(total_users=1000, concurrent_threads=50, ops_per_th
     print("=" * 80)
 
 if __name__ == "__main__":
-    run_workload_stress_test(total_users=1000, concurrent_threads=25, ops_per_thread=100)
+    run_workload_stress_test(total_users=1000, concurrent_threads=200, ops_per_thread=100)
