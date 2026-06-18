@@ -8,6 +8,6 @@ services:
       - "7000:7000"
     environment:
       - CASSANDRA_CLUSTER_NAME=UnimiBClusterLAN
-      - CASSANDRA_SEEDS=192.168.1.50 
+      - CASSANDRA_SEEDS=192.168.1.34 
       - CASSANDRA_BROADCAST_ADDRESS=${MY_LOCAL_IP} # Preso dal file .env locale
       - CASSANDRA_BROADCAST_RPC_ADDRESS=${MY_LOCAL_IP} # Preso dal file .env locale
