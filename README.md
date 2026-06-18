@@ -1,4 +1,8 @@
 # Progetto_AD
+
+## Introduzione
+Il progetto tratta lo sviluppo di un database NoSQL utilizzando il database distribuito Cassandra. L'applicativo costruito simula un social network twitter-like in cui sono presenti istanze di utenti, post, relazioni tra utenti e un feed. Per simulare dei carichi di lavoro sono stati preparati degli script all'interno della cartella *workloads*.
+
 ## How to run
 Il progetto è interamente scritto in Python e richiede 2 librerie esterne:
 1. cassandra-driver
@@ -55,7 +59,7 @@ sudo docker exec -i cassandra-node1 cqlsh < schema.cql
 ```  
 Per caricare i dati dello script python:
 ```
-cd workload
+cd workloads
 ```
 ```
 python3 NOME_WORKLOAD.py
