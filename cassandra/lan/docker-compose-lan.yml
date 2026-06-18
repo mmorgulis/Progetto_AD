@@ -1,0 +1,21 @@
+services:
+  cassandra-lan-node:
+    image: cassandra:4.1
+    container_name: cassandra-lan-node
+    ports:
+      - "7000:7000"
+      - "9042:9042"
+      - "7199:7199"  
+    environment:
+      - CASSANDRA_CLUSTER_NAME=CassandraClusterLAN
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch 
+      - CASSANDRA_LISTEN_ADDRESS=auto
+      - CASSANDRA_BROADCAST_ADDRESS=${MY_LOCAL_IP}
+      - CASSANDRA_RPC_ADDRESS=0.0.0.0
+      - CASSANDRA_BROADCAST_RPC_ADDRESS=${MY_LOCAL_IP}
+      - CASSANDRA_SEEDS=${CASSANDRA_SEED_IP}
+    volumes:
+      - cassandra-lan-data:/var/lib/cassandra
+
+volumes:
+  cassandra-lan-data:
